@@ -231,3 +231,37 @@ Target: nsg-wrong-region
 - The code is now `RequestDisallowedByPolicy`, and the error names both the assignment (Allowed locations (RG1)) and the built-in definition (Allowed locations, v1.1.0). That is the policy denying the request, not Azure capacity.
 - The request was made by the subscription Owner. Azure Policy evaluates **what** is being deployed, regardless of **who** deploys it: RBAC allowed the action, and Policy still blocked it.
 - The policy took effect within about 2 minutes of assignment.
+
+**Activity log entry for the denial** (portal: rg-idgov-lab > Activity log; trimmed, identity claims removed)
+
+```json
+{
+  "authorization": {
+    "action": "Microsoft.Network/networkSecurityGroups/write",
+    "scope": ".../resourceGroups/rg-idgov-lab/providers/Microsoft.Network/networkSecurityGroups/nsg-wrong-region"
+  },
+  "category": { "value": "Policy" },
+  "level": "Error",
+  "operationName": { "value": "Microsoft.Authorization/policies/deny/action", "localizedValue": "'deny' Policy action." },
+  "status": { "value": "Failed" },
+  "properties": {
+    "isComplianceCheck": "False",
+    "resourceLocation": "uksouth",
+    "policies": [{
+      "policyDefinitionDisplayName": "Allowed locations",
+      "policyDefinitionVersion": "1.1.0",
+      "policyDefinitionEffect": "Deny",
+      "policyAssignmentName": "allowed-locations-rg1",
+      "policyAssignmentScope": ".../resourceGroups/rg-idgov-lab",
+      "policyAssignmentEnforcementMode": "Default",
+      "policyExemptionIds": []
+    }]
+  }
+}
+```
+
+- The platform logs every policy denial in the Activity log under the **Policy** category, with the requested location (`uksouth`), the effect (`Deny`) and the assignment responsible. This is the audit trail a security team would alert on.
+- `isComplianceCheck: False` shows this was a real-time block of a write request, not a background compliance scan.
+- `policyExemptionIds` is empty: no exemption covered this request.
+
+![Activity log: deny policy action](02-policy-deny.png)
