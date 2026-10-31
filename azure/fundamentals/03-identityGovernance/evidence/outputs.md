@@ -176,3 +176,37 @@ labtest@<tenant>.onmicrosoft.com  NSG Operator (Lab)  /subscriptions/<subscripti
 **What this proves**
 - `--all` lists assignments at every scope (management group, subscription, resource group and resource), and only one comes back.
 - The test user's effective access is exactly the custom role on rg-idgov-lab. Nothing is inherited from the subscription, so outside that one resource group the user has no Azure access at all.
+
+## Step 5: Policy, Allowed locations on rg-idgov-lab
+
+```bash
+az policy assignment create --name allowed-locations-rg1 \
+  --display-name "Allowed locations (RG1)" \
+  --policy e56962a6-4747-49cd-b67b-bf8b01975c4c \
+  --scope $RG1_ID \
+  --params "{\"listOfAllowedLocations\":{\"value\":[\"$LOC\"]}}"
+```
+
+```json
+{
+  "displayName": "Allowed locations (RG1)",
+  "enforcementMode": "Default",
+  "name": "allowed-locations-rg1",
+  "parameters": { "listOfAllowedLocations": { "value": [ "southafricanorth" ] } },
+  "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c",
+  "scope": "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab",
+  "type": "Microsoft.Authorization/policyAssignments"
+}
+```
+
+- `policyDefinitionId` starts with `/providers/...` and has no subscription in it: this is a **built-in** definition, assigned (not copied) at resource group scope.
+- `enforcementMode: Default` means the Deny effect is enforced. `DoNotEnforce` would only report compliance.
+
+**False positive on the first negative test**
+
+```text
+(RequestDisallowedByAzure) Resource 'nsg-wrong-region' was disallowed by Azure:
+The selected region is currently not accepting new customers.
+```
+
+This was **not** the policy. The code is `RequestDisallowedByAzure`: West Europe is capacity-restricted for this subscription, so Azure itself refused the request. A policy denial returns `RequestDisallowedByPolicy` and names the policy assignment. The test was also run seconds after the assignment, before the policy had time to take effect, so it had to be repeated in a region the subscription can use.
