@@ -1,0 +1,17 @@
+{
+  "Name": "NSG Operator (Lab)",
+  "IsCustom": true,
+  "Description": "Can view resource groups and manage NSGs and their rules. Cannot create other resources or grant access.",
+  "Actions": [
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Network/networkSecurityGroups/read",
+    "Microsoft.Network/networkSecurityGroups/write",
+    "Microsoft.Network/networkSecurityGroups/securityRules/*"
+  ],
+  "NotActions": [],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/subscriptions/SUB_ID/resourceGroups/RG_NAME"
+  ]
+}
