@@ -1,5 +1,5 @@
 # Lab 1.1: RBAC, Azure Policy, tags and resource locks
-# Run in Azure Cloud Shell (Bash). Every resource here is free: resource groups,
+# Every resource here is free: resource groups,
 # NSGs, role definitions, policy assignments and locks cost nothing.
 
 # ---------- 0. Variables ----------
