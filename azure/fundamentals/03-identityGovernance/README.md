@@ -23,8 +23,8 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 | Check access (portal) | Test user shows the custom role, nothing inherited | NSG Operator (Lab), scope "This resource", 0 deny assignments |
 | NSG outside South Africa North (UK South) | Denied: RequestDisallowedByPolicy | Denied: RequestDisallowedByPolicy, naming allowed-locations-rg1 |
 | Existing NSG tags after remediation | CostCentre = 4410 | |
-| Delete NSG with CanNotDelete lock | Fails: ScopeLocked | |
-| Move NSG into ReadOnly group | Fails: move blocked by the lock | |
+| Delete NSG with CanNotDelete lock | Fails: ScopeLocked | Failed: ScopeLocked (lock inherited from rg-idgov-lab), even as Owner |
+| Move NSG into ReadOnly group | Fails: move blocked by the lock | Failed at validation: ResourceMovePolicyValidationFailed > ScopeLocked (write blocked in rg-idgov-locked) |
 | Cleanup | Both groups, role, user and policies removed | |
 
 ![Role assignment](evidence/01-role-assignment.png)

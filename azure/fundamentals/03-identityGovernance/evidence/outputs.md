@@ -265,3 +265,61 @@ Target: nsg-wrong-region
 - `policyExemptionIds` is empty: no exemption covered this request.
 
 ![Activity log: deny policy action](02-policy-deny.png)
+
+## Step 7: Resource locks
+
+```bash
+az lock create -n no-delete -g $RG1 --lock-type CanNotDelete
+az network nsg delete -g $RG1 -n $NSG
+az lock create -n read-only -g $RG2 --lock-type ReadOnly
+NSG_ID=$(az network nsg show -g $RG1 -n $NSG --query id -o tsv)
+az resource move --destination-group $RG2 --ids $NSG_ID
+```
+
+**CanNotDelete lock on rg-idgov-lab**
+
+```json
+{
+  "id": "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab/providers/Microsoft.Authorization/locks/no-delete",
+  "level": "CanNotDelete",
+  "name": "no-delete",
+  "resourceGroup": "rg-idgov-lab"
+}
+```
+
+**Delete attempt on the NSG, as subscription Owner**
+
+```text
+(ScopeLocked) The scope '.../resourceGroups/rg-idgov-lab/providers/Microsoft.Network/networkSecurityGroups/nsg-idgov-test'
+cannot perform delete operation because following scope(s) are locked: '.../resourceGroups/rg-idgov-lab'.
+Please remove the lock and try again.
+Code: ScopeLocked
+```
+
+**ReadOnly lock on rg-idgov-locked**
+
+```json
+{
+  "id": "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-locked/providers/Microsoft.Authorization/locks/read-only",
+  "level": "ReadOnly",
+  "name": "read-only",
+  "resourceGroup": "rg-idgov-locked"
+}
+```
+
+**Move attempt into the ReadOnly group**
+
+```text
+(ResourceMovePolicyValidationFailed) Resource move policy validation failed.
+Exception Details: {"error":{"code":"ScopeLocked","message":"The scope
+  '.../resourcegroups/rg-idgov-locked/providers/Microsoft.Network/networkSecurityGroups/nsg-idgov-test'
+  cannot perform write operation because following scope(s) are locked: '.../resourceGroups/rg-idgov-locked'.
+  Please remove the lock and try again."}}
+Target: Microsoft.Network/networkSecurityGroups/nsg-idgov-test
+```
+
+**What this proves**
+- The lock was set on the **resource group**, but it blocked the delete of the **NSG** inside it: locks are inherited by every resource below the scope where they're set.
+- The delete was attempted by the subscription Owner. Locks override RBAC, so even Owner must remove the lock first.
+- The move was rejected during validation, before anything changed. The error is about a **write** operation on the NSG's would-be path inside rg-idgov-locked: a move writes into the destination group, and ReadOnly blocks every write. The same applies to the source group, which is why a ReadOnly lock on either side blocks a move.
+- A CanNotDelete lock still allows changes: the tag remediation in rg-idgov-lab (step 6) is a write, not a delete, so it isn't blocked.
