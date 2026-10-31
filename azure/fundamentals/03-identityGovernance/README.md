@@ -36,12 +36,6 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 ### What I learned
 - 
 
-### Exam traps I hit or noted
-- A moved resource keeps its region but picks up the destination group's policies and role assignments
-- A ReadOnly lock on the source or destination group blocks a move
-- Operator roles run things; they can't create them (Logic App Operator can't create logic apps)
-- Group expiration policies apply only to Microsoft 365 groups, never security groups
-- Removing a lock needs `Microsoft.Authorization/locks/*`, which only Owner and User Access Administrator have built in
 
 ### Reference
 - [Create a custom role with the Azure CLI](https://learn.microsoft.com/en-us/azure/role-based-access-control/custom-roles-cli)
