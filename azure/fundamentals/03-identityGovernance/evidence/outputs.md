@@ -107,3 +107,56 @@ az ad user create --display-name "Lab Test User" \
 - A cloud-only user was created in Microsoft Entra ID through Microsoft Graph (the `@odata.context` line). The object `id` is what RBAC actually assigns roles to.
 - The password was read with `read -s`, so it never appeared on screen or in shell history, and the user must change it at first sign-in.
 - Optional profile fields are empty, including **usage location**, so this user couldn't be given a licence until it's set. Azure RBAC roles don't need a licence, so the lab is unaffected.
+
+## Step 3: Custom role and assignment
+
+```bash
+sed "s|SUB_ID|$SUB|; s|RG_NAME|$RG1|" nsg-operator.json > /tmp/nsg-operator.json
+az role definition create --role-definition @/tmp/nsg-operator.json
+az role assignment create --assignee $UPN \
+  --role "NSG Operator (Lab)" --scope $RG1_ID
+```
+
+**Role definition**
+
+```json
+{
+  "roleName": "NSG Operator (Lab)",
+  "roleType": "CustomRole",
+  "id": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/<role-id>",
+  "assignableScopes": [
+    "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab"
+  ],
+  "permissions": [
+    {
+      "actions": [
+        "Microsoft.Resources/subscriptions/resourceGroups/read",
+        "Microsoft.Network/networkSecurityGroups/read",
+        "Microsoft.Network/networkSecurityGroups/write",
+        "Microsoft.Network/networkSecurityGroups/securityRules/*"
+      ],
+      "notActions": [],
+      "dataActions": [],
+      "notDataActions": []
+    }
+  ]
+}
+```
+
+**Role assignment**
+
+```json
+{
+  "principalId": "<labtest-object-id>",
+  "principalType": "User",
+  "roleDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/<role-id>",
+  "scope": "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab",
+  "resourceGroup": "rg-idgov-lab"
+}
+```
+
+**What this proves**
+- The assignment has all three parts: **who** (`principalId` matches the test user's object ID from step 2), **what** (the custom role's `roleDefinitionId`) and **where** (`scope` is rg-idgov-lab only).
+- The role definition is stored at subscription level (its `id`), but `assignableScopes` restricts it so it can only be assigned on rg-idgov-lab.
+- Least privilege: the role can read the resource group and manage NSGs and their rules, with no `*` wildcard on the provider, no ability to create other resource types, and no `Microsoft.Authorization` actions, so it can't grant access to anyone else.
+- Management-plane only: `dataActions` is empty, so the role gives no access to data inside any service.
