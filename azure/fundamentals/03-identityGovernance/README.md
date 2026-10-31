@@ -34,7 +34,17 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 ![ReadOnly blocks move](evidence/05-readonly-move.png)
 
 ### What I learned
-- 
+- **Read the error code before trusting a negative test.** My first location test failed with `RequestDisallowedByAzure` (West Europe wasn't accepting new customers on my subscription), which looked like a pass but wasn't the policy at all. The real result was `RequestDisallowedByPolicy`, which names the assignment that blocked it.
+- **RBAC decides who, Policy decides what.** As subscription Owner I had every permission to create an NSG, and the Allowed locations policy still blocked it in UK South.
+- **Locks beat Owner.** A CanNotDelete lock on the resource group stopped me deleting the NSG inside it; locks are inherited by everything below the scope where they're set.
+- **A move is a write.** Moving the NSG into a ReadOnly resource group failed at validation with `ScopeLocked ... cannot perform write operation`. A ReadOnly lock on either the source or the destination blocks a move.
+- **CanNotDelete still allows changes.** It only stops deletes, so tag updates and policy remediation keep working underneath it.
+- **Tags don't inherit.** The NSG had no tags even though its resource group was tagged `CostCentre=4410`; it took a Modify policy to copy the tag down.
+- **Modify and DeployIfNotExists policies need a managed identity.** Assigning the tag policy created a system-assigned identity, and it needed the Tag Contributor role to be allowed to write tags.
+- **Remediation only fixes what has already been evaluated.** My first remediation task finished with 0 deployments because the compliance scan hadn't run yet. Re-running it with `--resource-discovery-mode ReEvaluateCompliance` scans first, which can take 10-30 minutes on a new assignment.
+- **Resource providers must be registered.** Remediation failed with `SubscriptionNotRegistered` until I registered `Microsoft.PolicyInsights` on the subscription.
+- **A custom role's `assignableScopes` limits where it can be used.** The role definition lives at subscription level, but mine can only be assigned on one resource group. `az role assignment list --all` confirmed the test user had exactly one assignment, at that scope, and nothing inherited.
+- **Disabled subscriptions are read-only**, and Cloud Shell needs to be in Bash for Bash scripts: my first two attempts failed on `ReadOnlyDisabledSubscription` and on PowerShell syntax errors.
 
 
 ### Reference
