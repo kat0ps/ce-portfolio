@@ -160,3 +160,19 @@ az role assignment create --assignee $UPN \
 - The role definition is stored at subscription level (its `id`), but `assignableScopes` restricts it so it can only be assigned on rg-idgov-lab.
 - Least privilege: the role can read the resource group and manage NSGs and their rules, with no `*` wildcard on the provider, no ability to create other resource types, and no `Microsoft.Authorization` actions, so it can't grant access to anyone else.
 - Management-plane only: `dataActions` is empty, so the role gives no access to data inside any service.
+
+## Step 4: Interpret access
+
+```bash
+az role assignment list --assignee $UPN --all -o table
+```
+
+```text
+Principal                         Role                Scope
+--------------------------------  ------------------  ------------------------------------------------------
+labtest@<tenant>.onmicrosoft.com  NSG Operator (Lab)  /subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab
+```
+
+**What this proves**
+- `--all` lists assignments at every scope (management group, subscription, resource group and resource), and only one comes back.
+- The test user's effective access is exactly the custom role on rg-idgov-lab. Nothing is inherited from the subscription, so outside that one resource group the user has no Azure access at all.
