@@ -80,3 +80,30 @@ RG1_ID=$(az group show -n $RG1 --query id -o tsv)
 - A new NSG denies all inbound traffic from the internet but **allows outbound internet** by default (AllowInternetOutBound, priority 65001).
 
 > Troubleshooting note: the first attempt failed with `ReadOnlyDisabledSubscription` because the original subscription was disabled, which makes it read-only. Switching to an active subscription fixed it. A second attempt failed because Cloud Shell was in PowerShell, which can't parse `VAR=value`, heredocs or `source`; switching to Bash fixed it.
+
+## Step 2: Test user (cloud-only)
+
+```bash
+read -s -p "Temporary password for labtest: " PW; echo
+az ad user create --display-name "Lab Test User" \
+  --user-principal-name $UPN --password "$PW" \
+  --force-change-password-next-sign-in true
+```
+
+```json
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users/$entity",
+  "displayName": "Lab Test User",
+  "id": "<object-id>",
+  "givenName": null,
+  "surname": null,
+  "jobTitle": null,
+  "mail": null,
+  "userPrincipalName": "labtest@<tenant>.onmicrosoft.com"
+}
+```
+
+**What this proves**
+- A cloud-only user was created in Microsoft Entra ID through Microsoft Graph (the `@odata.context` line). The object `id` is what RBAC actually assigns roles to.
+- The password was read with `read -s`, so it never appeared on screen or in shell history, and the user must change it at first sign-in.
+- Optional profile fields are empty, including **usage location**, so this user couldn't be given a licence until it's set. Azure RBAC roles don't need a licence, so the lab is unaffected.
