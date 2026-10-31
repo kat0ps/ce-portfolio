@@ -25,7 +25,7 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 | Existing NSG tags after remediation | CostCentre = 4410 | CostCentre = 4410 after remediation (1 of 1 deployments succeeded); Owner tag not copied |
 | Delete NSG with CanNotDelete lock | Fails: ScopeLocked | Failed: ScopeLocked (lock inherited from rg-idgov-lab), even as Owner |
 | Move NSG into ReadOnly group | Fails: move blocked by the lock | Failed at validation: ResourceMovePolicyValidationFailed > ScopeLocked (write blocked in rg-idgov-locked) |
-| Cleanup | Both groups, role, user and policies removed | |
+| Cleanup | Both groups, role, user and policies removed | Completed with no errors: locks removed first, then policies, role assignment, custom role, test user and both groups |
 
 ![Role assignment](evidence/01-role-assignment.png)
 ![Policy deny in the Activity log](evidence/02-policy-deny.png)

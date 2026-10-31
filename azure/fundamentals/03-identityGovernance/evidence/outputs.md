@@ -413,3 +413,25 @@ Target: Microsoft.Network/networkSecurityGroups/nsg-idgov-test
 - The delete was attempted by the subscription Owner. Locks override RBAC, so even Owner must remove the lock first.
 - The move was rejected during validation, before anything changed. The error is about a **write** operation on the NSG's would-be path inside rg-idgov-locked: a move writes into the destination group, and ReadOnly blocks every write. The same applies to the source group, which is why a ReadOnly lock on either side blocks a move.
 - A CanNotDelete lock still allows changes: the tag remediation in rg-idgov-lab (step 6) is a write, not a delete, so it isn't blocked.
+
+## Step 8: Cleanup
+
+```bash
+az lock delete -n no-delete -g $RG1
+az lock delete -n read-only -g $RG2
+az policy assignment delete --name allowed-locations-rg1 --scope $RG1_ID
+az policy assignment delete --name inherit-costcentre --scope $RG1_ID
+az role assignment delete --assignee $UPN --scope $RG1_ID
+az role definition delete --name "NSG Operator (Lab)"
+az ad user delete --id $UPN
+az group delete -n $RG1 --yes --no-wait
+az group delete -n $RG2 --yes --no-wait
+```
+
+All commands returned to the prompt with no errors (these commands print nothing on success).
+
+**Why this order**
+- **Locks first.** With the locks in place, the resource group deletes would fail with `ScopeLocked`, exactly as the NSG delete did in step 7.
+- **Role assignment before role definition.** A custom role can't be deleted while it's still assigned.
+- **Policy identity.** Deleting the tag policy assignment removes its managed identity, but its Tag Contributor role assignment can be left behind as "Identity not found". Here it was scoped to rg-idgov-lab, so deleting the group removed it; in a shared environment I'd remove that role assignment explicitly.
+- `--no-wait` returns immediately while Azure deletes the groups in the background.
