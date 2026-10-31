@@ -19,9 +19,9 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 ### Verification evidence
 | Check | Expected | Result |
 |-------|----------|--------|
-| Custom role assignment | NSG Operator (Lab) on rg-idgov-lab only | |
-| Check access (portal) | Test user shows the custom role, nothing inherited | |
-| NSG in West Europe | Denied: RequestDisallowedByPolicy | |
+| Custom role assignment | NSG Operator (Lab) on rg-idgov-lab only | One assignment at rg-idgov-lab (`--all` returns nothing else) |
+| Check access (portal) | Test user shows the custom role, nothing inherited | NSG Operator (Lab), scope "This resource", 0 deny assignments |
+| NSG outside South Africa North (UK South) | Denied: RequestDisallowedByPolicy | Denied: RequestDisallowedByPolicy, naming allowed-locations-rg1 |
 | Existing NSG tags after remediation | CostCentre = 4410 | |
 | Delete NSG with CanNotDelete lock | Fails: ScopeLocked | |
 | Move NSG into ReadOnly group | Fails: move blocked by the lock | |

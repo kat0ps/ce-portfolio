@@ -210,3 +210,24 @@ The selected region is currently not accepting new customers.
 ```
 
 This was **not** the policy. The code is `RequestDisallowedByAzure`: West Europe is capacity-restricted for this subscription, so Azure itself refused the request. A policy denial returns `RequestDisallowedByPolicy` and names the policy assignment. The test was also run seconds after the assignment, before the policy had time to take effect, so it had to be repeated in a region the subscription can use.
+
+**Negative test, repeated in an available region**
+
+```bash
+az network nsg create -g $RG1 -n nsg-wrong-region -l uksouth
+```
+
+```text
+(RequestDisallowedByPolicy) Resource 'nsg-wrong-region' was disallowed by policy.
+Policy identifiers: '[{"policyAssignment":{"name":"Allowed locations (RG1)",
+  "id":"/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab/providers/Microsoft.Authorization/policyAssignments/allowed-locations-rg1"},
+  "policyDefinition":{"name":"Allowed locations",
+  "id":"/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c","version":"1.1.0"}}]'.
+Code: RequestDisallowedByPolicy
+Target: nsg-wrong-region
+```
+
+**What this proves**
+- The code is now `RequestDisallowedByPolicy`, and the error names both the assignment (Allowed locations (RG1)) and the built-in definition (Allowed locations, v1.1.0). That is the policy denying the request, not Azure capacity.
+- The request was made by the subscription Owner. Azure Policy evaluates **what** is being deployed, regardless of **who** deploys it: RBAC allowed the action, and Policy still blocked it.
+- The policy took effect within about 2 minutes of assignment.
