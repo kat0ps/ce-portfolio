@@ -22,16 +22,15 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 | Custom role assignment | NSG Operator (Lab) on rg-idgov-lab only | One assignment at rg-idgov-lab (`--all` returns nothing else) |
 | Check access (portal) | Test user shows the custom role, nothing inherited | NSG Operator (Lab), scope "This resource", 0 deny assignments |
 | NSG outside South Africa North (UK South) | Denied: RequestDisallowedByPolicy | Denied: RequestDisallowedByPolicy, naming allowed-locations-rg1 |
-| Existing NSG tags after remediation | CostCentre = 4410 | |
+| Existing NSG tags after remediation | CostCentre = 4410 | CostCentre = 4410 after remediation (1 of 1 deployments succeeded); Owner tag not copied |
 | Delete NSG with CanNotDelete lock | Fails: ScopeLocked | Failed: ScopeLocked (lock inherited from rg-idgov-lab), even as Owner |
 | Move NSG into ReadOnly group | Fails: move blocked by the lock | Failed at validation: ResourceMovePolicyValidationFailed > ScopeLocked (write blocked in rg-idgov-locked) |
 | Cleanup | Both groups, role, user and policies removed | |
 
 ![Role assignment](evidence/01-role-assignment.png)
-![Policy deny](evidence/02-policy-deny.png)
-![Tag remediated](evidence/03-tag-remediated.png)
-![Lock blocks delete](evidence/04-lock-delete.png)
-![ReadOnly blocks move](evidence/05-readonly-move.png)
+![Policy deny in the Activity log](evidence/02-policy-deny.png)
+
+Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 
 ### What I learned
 - **Read the error code before trusting a negative test.** My first location test failed with `RequestDisallowedByAzure` (West Europe wasn't accepting new customers on my subscription), which looked like a pass but wasn't the policy at all. The real result was `RequestDisallowedByPolicy`, which names the assignment that blocked it.

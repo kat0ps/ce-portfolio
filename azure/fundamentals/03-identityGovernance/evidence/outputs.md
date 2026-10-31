@@ -266,6 +266,96 @@ Target: nsg-wrong-region
 
 ![Activity log: deny policy action](02-policy-deny.png)
 
+## Step 6: Policy, inherit the CostCentre tag (Modify + remediation)
+
+```bash
+az policy assignment create --name inherit-costcentre \
+  --display-name "Inherit CostCentre tag from RG1" \
+  --policy ea3f2387-9b95-492a-a190-fcdc54f7b070 \
+  --scope $RG1_ID --params '{"tagName":{"value":"CostCentre"}}' \
+  --mi-system-assigned --location $LOC --role "Tag Contributor" \
+  --identity-scope $RG1_ID
+```
+
+```json
+{
+  "displayName": "Inherit CostCentre tag from RG1",
+  "enforcementMode": "Default",
+  "identity": { "principalId": "<policy-identity-object-id>", "type": "SystemAssigned" },
+  "location": "southafricanorth",
+  "parameters": { "tagName": { "value": "CostCentre" } },
+  "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/ea3f2387-9b95-492a-a190-fcdc54f7b070",
+  "scope": "/subscriptions/<subscription-id>/resourceGroups/rg-idgov-lab"
+}
+```
+
+- The built-in "Inherit a tag from the resource group if missing" uses the **Modify** effect, so the assignment gets a **system-assigned managed identity**. `--role "Tag Contributor"` lets that identity write tags (and nothing else) in rg-idgov-lab.
+
+**Remediation attempt 1: resource provider not registered**
+
+```text
+(SubscriptionNotRegistered) The subscription '<subscription-id>' is not registered to use namespace Microsoft.PolicyInsights.
+```
+
+```bash
+az provider register --namespace Microsoft.PolicyInsights
+az provider show -n Microsoft.PolicyInsights --query registrationState -o tsv   # Registering, then Registered
+```
+
+**Remediation attempt 2: nothing to fix yet**
+
+```bash
+az policy remediation create --name fix-costcentre \
+  --policy-assignment inherit-costcentre --resource-group $RG1
+```
+
+```json
+{
+  "deploymentStatus": { "failedDeployments": 0, "successfulDeployments": 0, "totalDeployments": 0 },
+  "provisioningState": "Succeeded",
+  "resourceDiscoveryMode": "ExistingNonCompliant"
+}
+```
+
+- `ExistingNonCompliant` only targets resources the last compliance scan already flagged. The assignment was 3 minutes old and hadn't been scanned, so the task found 0 resources.
+
+**Remediation attempt 3: re-evaluate compliance first**
+
+```bash
+az policy remediation create --name fix-costcentre-2 \
+  --policy-assignment inherit-costcentre --resource-group $RG1 \
+  --resource-discovery-mode ReEvaluateCompliance
+az policy remediation show -n fix-costcentre-2 -g $RG1 \
+  --query "{state:provisioningState, deployments:deploymentStatus}"
+```
+
+Status progressed `Accepted` > `Evaluating` (about 15 minutes) > `Succeeded`:
+
+```json
+{
+  "deployments": { "failedDeployments": 0, "successfulDeployments": 1, "totalDeployments": 1 },
+  "state": "Succeeded"
+}
+```
+
+**Result on the NSG**
+
+```bash
+az network nsg show -g $RG1 -n $NSG --query tags
+```
+
+```json
+{
+  "CostCentre": "4410"
+}
+```
+
+**What this proves**
+- Before: the NSG had no tags (step 1). After: it has `CostCentre: 4410`, copied from the resource group by the policy's managed identity, with no manual tagging.
+- Only the tag named in the parameter was inherited. The resource group also has `Owner: Kat`, and the NSG did **not** get it: each tag needs its own assignment (or an initiative that bundles several).
+- `totalDeployments: 1`: the scan found exactly one non-compliant resource, the NSG, and fixed it.
+- New NSGs created in this group from now on get the tag automatically at creation time; remediation is only needed for resources that existed before the assignment.
+
 ## Step 7: Resource locks
 
 ```bash
