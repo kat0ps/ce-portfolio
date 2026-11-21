@@ -160,6 +160,7 @@ az role assignment create --assignee $UPN \
 - The role definition is stored at subscription level (its `id`), but `assignableScopes` restricts it so it can only be assigned on rg-idgov-lab.
 - Least privilege: the role can read the resource group and manage NSGs and their rules, with no `*` wildcard on the provider, no ability to create other resource types, and no `Microsoft.Authorization` actions, so it can't grant access to anyone else.
 - Management-plane only: `dataActions` is empty, so the role gives no access to data inside any service.
+- In the portal rebuild I replaced `securityRules/*` with explicit read, write and delete actions and added `defaultSecurityRules/read`, so the user can see the built-in rules too. [nsg-operator.json](../nsg-operator.json) now matches that tighter version (screenshot 04).
 
 ## Step 4: Interpret access
 
@@ -264,7 +265,7 @@ Target: nsg-wrong-region
 - `isComplianceCheck: False` shows this was a real-time block of a write request, not a background compliance scan.
 - `policyExemptionIds` is empty: no exemption covered this request.
 
-![Activity log: deny policy action](02-policy-deny.png)
+![Activity log: deny policy action](07-policy-deny-activity-log.png)
 
 ## Step 6: Policy, inherit the CostCentre tag (Modify + remediation)
 

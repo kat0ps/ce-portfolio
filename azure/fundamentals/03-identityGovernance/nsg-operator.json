@@ -6,7 +6,10 @@
     "Microsoft.Resources/subscriptions/resourceGroups/read",
     "Microsoft.Network/networkSecurityGroups/read",
     "Microsoft.Network/networkSecurityGroups/write",
-    "Microsoft.Network/networkSecurityGroups/securityRules/*"
+    "Microsoft.Network/networkSecurityGroups/defaultSecurityRules/read",
+    "Microsoft.Network/networkSecurityGroups/securityRules/read",
+    "Microsoft.Network/networkSecurityGroups/securityRules/write",
+    "Microsoft.Network/networkSecurityGroups/securityRules/delete"
   ],
   "NotActions": [],
   "DataActions": [],

@@ -27,10 +27,39 @@ See [commands.sh](commands.sh) and [nsg-operator.json](nsg-operator.json).
 | Move NSG into ReadOnly group | Fails: move blocked by the lock | Failed at validation: ResourceMovePolicyValidationFailed > ScopeLocked (write blocked in rg-idgov-locked) |
 | Cleanup | Both groups, role, user and policies removed | Completed with no errors: locks removed first, then policies, role assignment, custom role, test user and both groups |
 
-![Role assignment](evidence/01-role-assignment.png)
-![Policy deny in the Activity log](evidence/02-policy-deny.png)
+#### Screenshots
+I first built the lab with the Azure CLI, then rebuilt it in the portal to capture a screenshot at every check. Subscription IDs, tenant names and account names are blurred.
 
-Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
+| # | Step | What it shows |
+|---|------|---------------|
+| 01 | Setup | `rg-idgov-lab` tagged `CostCentre=4410` and `Owner=Kat`, containing the test NSG |
+| 02 | Setup | The NSG has **no tags**: tags don't inherit from the resource group (the "before" picture) |
+| 03 | Identity | The cloud-only test user |
+| 04 | RBAC | The custom role's permissions, assignable only to `rg-idgov-lab` |
+| 05 | RBAC | Check access: one role, scope "This resource", 0 deny assignments |
+| 06 | Policy | The portal blocks an NSG in UK South with the Allowed locations policy |
+| 07 / 07a | Policy | The same deny from the CLI (`RequestDisallowedByPolicy`) and its Activity log entry |
+| 08 | Tags | Remediation task complete, 1 of 1 resources fixed |
+| 09 | Tags | The NSG now has `CostCentre: 4410` and **not** `Owner` (the "after" picture) |
+| 10 | Locks | CanNotDelete on the resource group blocks deleting the NSG inside it |
+| 11 | Locks | ReadOnly on the destination group blocks the move (`ScopeLocked`, write operation) |
+| 12 | Cleanup | No resource groups left |
+
+![01 Resource group tags](evidence/01-resource-group-tags.png)
+![02 NSG with no tags](evidence/02-nsg-no-tags.png)
+![03 Test user](evidence/03-test-user.png)
+![04 Custom role permissions](evidence/04-custom-role-permissions.png)
+![05 Check access](evidence/05-role-assignment.png)
+![06 Policy deny in the portal](evidence/06-policy-deny-create.png)
+![07a Policy deny in the CLI](evidence/07a-policy-deny-cli.png)
+![07 Policy deny in the Activity log](evidence/07-policy-deny-activity-log.png)
+![08 Remediation complete](evidence/08-remediation-complete.png)
+![09 Tag inherited](evidence/09-tag-inherited.png)
+![10 Delete blocked by lock](evidence/10-lock-delete-blocked.png)
+![11 Move blocked by ReadOnly lock](evidence/11-readonly-move-blocked.png)
+![12 Cleanup](evidence/12-cleanup.png)
+
+Full command outputs for every step of the CLI run: [evidence/outputs.md](evidence/outputs.md)
 
 ### What I learned
 - **Read the error code before trusting a negative test.** My first location test failed with `RequestDisallowedByAzure` (West Europe wasn't accepting new customers on my subscription), which looked like a pass but wasn't the policy at all. The real result was `RequestDisallowedByPolicy`, which names the assignment that blocked it.

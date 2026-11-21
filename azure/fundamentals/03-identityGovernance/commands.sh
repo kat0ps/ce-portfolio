@@ -44,19 +44,28 @@ az policy assignment create --name allowed-locations-rg1 \
   --policy e56962a6-4747-49cd-b67b-bf8b01975c4c \
   --scope $RG1_ID \
   --params "{\"listOfAllowedLocations\":{\"value\":[\"$LOC\"]}}"
-# Wait ~5-15 minutes, then the negative test (expect RequestDisallowedByPolicy):
-az network nsg create -g $RG1 -n nsg-wrong-region -l westeurope
+# Wait ~5-15 minutes, then the negative test (expect RequestDisallowedByPolicy).
+# Use a region your subscription can deploy to: West Europe returned RequestDisallowedByAzure
+# (region not accepting new customers), which is a capacity refusal, not the policy.
+az network nsg create -g $RG1 -n nsg-wrong-region -l uksouth
 
 # ---------- 6. Policy: inherit the CostCentre tag (Modify + remediation) ----------
+# Remediation fails with SubscriptionNotRegistered until this provider is registered.
+az provider register --namespace Microsoft.PolicyInsights
 az policy assignment create --name inherit-costcentre \
   --display-name "Inherit CostCentre tag from RG1" \
   --policy ea3f2387-9b95-492a-a190-fcdc54f7b070 \
   --scope $RG1_ID --params '{"tagName":{"value":"CostCentre"}}' \
   --mi-system-assigned --location $LOC --role "Tag Contributor" \
   --identity-scope $RG1_ID
+# ReEvaluateCompliance scans first; without it a new assignment remediates 0 resources
+# because no compliance scan has run yet. Expect 10-30 minutes.
 az policy remediation create --name fix-costcentre \
-  --policy-assignment inherit-costcentre --resource-group $RG1
-# Verify after a few minutes (the NSG existed before the policy):
+  --policy-assignment inherit-costcentre --resource-group $RG1 \
+  --resource-discovery-mode ReEvaluateCompliance
+az policy remediation show -n fix-costcentre -g $RG1 \
+  --query "{state:provisioningState, deployments:deploymentStatus}"
+# Verify once the state is Succeeded (the NSG existed before the policy):
 az network nsg show -g $RG1 -n $NSG --query tags
 
 # ---------- 7. Locks ----------
