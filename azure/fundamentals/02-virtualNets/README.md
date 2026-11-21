@@ -68,5 +68,3 @@ while making commands repeatable across sessions.
 - Standard public IPs are static by default; Basic SKU is retired
 - Newer VNets use private subnets by default, so VMs need a NAT gateway or public IP for outbound
 
-### Exam traps I hit or noted
-- one line per thing that surprised you as you went through this
