@@ -81,7 +81,8 @@ HUB_IP=$(az vm show -g $RG -n vm-hub -d --query privateIps -o tsv)
 WEB_IP=$(az vm show -g $RG -n vm-web -d --query privateIps -o tsv)
 echo "HUB_IP=$HUB_IP" >> ~/vnetfun.env; echo "WEB_IP=$WEB_IP" >> ~/vnetfun.env
 # (01-resource-group.png was taken after section 1)
-# 📸 04-vms-no-public-ip.png   Portal: Virtual machines (Manage view > Edit columns > add Public IP address; it's empty)
+# 📸 04a-vms-resource-group.png  Portal: rg-vnetfun-netmon > Overview (VMs, disks, NICs; no public IPs)
+# 📸 04b-vms-no-public-ip.png    Portal: Virtual machines (Manage view > Edit columns > add Public IP address; it's empty)
 
 # Helper: run a shell command inside a VM without any inbound access (uses the VM agent).
 vmrun() { az vm run-command invoke -g $RG -n $1 --command-id RunShellScript --scripts "$2" --query "value[0].message" -o tsv; }

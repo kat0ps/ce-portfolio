@@ -75,13 +75,14 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 01 | VNets | Resource group in South Africa North with both VNets |
 | 02 | VNets | Spoke subnets: 251 usable IPs per /24 (Azure reserves 5) |
 | 03a / 03b | Peering | hub-to-spoke and spoke-to-hub, both Connected and Fully Synchronized |
-| 04 | VMs | Two VMs, their disks and NICs, and no Public IP address resources |
+| 04a / 04b | VMs | Two VMs with their disks and NICs, no Public IP address resources, and an empty Public IP address column |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
 ![03a Peering from the hub](evidence/03a-peering-connected.png)
 ![03b Peering from the spoke](evidence/03b-peering-connected.png)
-![04 VMs with no public IP](evidence/04-vms-no-public-ip.png)
+![04a VMs in the resource group](evidence/04a-vms-resource-group.png)
+![04b Public IP address column empty](evidence/04b-vms-no-public-ip.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

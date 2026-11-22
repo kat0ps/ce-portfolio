@@ -133,7 +133,8 @@ rtt min/avg/max/mdev = 1.008/1.486/1.826/0.348 ms
 - The ping ran through **Run Command**, which goes through the VM agent and the Azure platform, not the network. That's how a VM with no public IP and no Bastion can still be managed.
 - Two VMs, not three: see [troubleshooting.md](../troubleshooting.md) entries 2 and 3 (capacity and the 4 vCPU quota).
 
-![VMs with no public IP](04-vms-no-public-ip.png)
+![04a Resource group: VMs, disks and NICs, no public IP resources](04a-vms-resource-group.png)
+![04b Virtual machines: Public IP address column empty](04b-vms-no-public-ip.png)
 
 ## Step 5: Bastion Basic (created, used, deleted)
 
