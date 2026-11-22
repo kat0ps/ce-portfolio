@@ -183,6 +183,15 @@ az network public-ip delete -g $RG -n pip-bastion
 
 ![Bastion connection](05-bastion-connect.png)
 
+Confirmed both were gone before moving on:
+
+```bash
+az network bastion list -g $RG -o table
+az network public-ip list -g $RG -o table
+```
+
+Both returned nothing. Bastion existed for about 20 minutes.
+
 ## Step 6: Outbound blocked, then fixed by a NAT gateway
 
 **Before the NAT gateway**
@@ -192,8 +201,14 @@ vmrun vm-web "curl -s -o /dev/null -w 'HTTP %{http_code}\n' --max-time 10 https:
 ```
 
 ```text
-<paste output>
+Enable succeeded:
+[stdout]
+HTTP 000
+
+[stderr]
 ```
+
+`HTTP 000` means curl never got a response: it gave up after the 10-second `--max-time`.
 
 **After the NAT gateway**
 

@@ -7,8 +7,7 @@
 # Bastion is created and deleted inside section 5 to keep its cost to minutes.
 #
 # If Cloud Shell times out mid-lab, reload before carrying on:
-#   source ~/vnetfun.env
-#   vmrun() { az vm run-command invoke -g $RG -n $1 --command-id RunShellScript --scripts "$2" --query "value[0].message" -o tsv; }
+#   source ~/vnetfun.env     (this also restores the vmrun helper from section 3)
 
 # ---------- 0. Variables ----------
 # Saved in ~/vnetfun.env so nothing tenant-specific lands in source control.
@@ -83,7 +82,9 @@ echo "HUB_IP=$HUB_IP" >> ~/vnetfun.env; echo "WEB_IP=$WEB_IP" >> ~/vnetfun.env
 # 📸 04-vms-no-public-ip.png   Portal: Virtual machines (Manage view > Edit columns > add Public IP address; it's empty)
 
 # Helper: run a shell command inside a VM without any inbound access (uses the VM agent).
-vmrun() { az vm run-command invoke -g $RG -n $1 --command-id RunShellScript --scripts "$2" --query "value[0].message" -o tsv; }
+# Saved into the env file so 'source ~/vnetfun.env' brings it back after a Cloud Shell restart.
+echo 'vmrun() { az vm run-command invoke -g $RG -n $1 --command-id RunShellScript --scripts "$2" --query "value[0].message" -o tsv; }' >> ~/vnetfun.env
+source ~/vnetfun.env
 
 # Peering works: spoke VM can reach hub VM
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
