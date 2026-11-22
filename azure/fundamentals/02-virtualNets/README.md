@@ -64,7 +64,7 @@ See [commands.sh](commands.sh).
 | Outbound from VM | HTTP 200 after NAT gateway | HTTP 000 before, HTTP 200 after; egress IP = NAT IP |
 | UDR next hop | None while attached, peering route after removal | None (rt-web) with 100% ping loss; VirtualNetworkPeering and 0% loss after removal |
 | Service endpoint | Storage reachable from snet-shared only | vm-hub passes the firewall (PublicAccessNotPermitted); vm-web blocked (AuthorizationFailure) |
-| Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | |
+| Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | 10.20.2.4 from vm-hub (across the peering), 20.209.131.33 from the internet; AuthorizationFailure from the internet |
 | Cleanup | Resource group deleted | |
 
 #### Screenshots
@@ -85,6 +85,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 11 | Service endpoint | Same request: vm-hub passes the storage firewall (`PublicAccessNotPermitted`), vm-web is blocked (`AuthorizationFailure`) |
 | 12 | Service endpoint | Storage firewall: selected networks only, vnet-hub allowed |
 | 13a / 13b | Service endpoint | vm-hub's effective routes include `VirtualNetworkServiceEndpoint` next hops for Storage address ranges (portal, then filtered in the CLI) |
+| 14 | Private endpoint | SA2 resolves to its public IP from the internet and to 10.20.2.4 from vm-hub; anonymous internet request refused |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -101,6 +102,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![12 Storage firewall](evidence/12-storage-firewall.png)
 ![13a Service endpoint routes in the portal](evidence/13a-service-endpoint-routes.png)
 ![13b Service endpoint routes from the CLI](evidence/13b-service-endpoint-routes-cli.png)
+![14 Private endpoint DNS](evidence/14-private-endpoint-dns.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

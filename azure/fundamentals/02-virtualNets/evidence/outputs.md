@@ -398,18 +398,60 @@ Two service endpoint routes, each covering a list of Azure Storage address range
 ## Step 9: Private endpoint (SA2)
 
 ```bash
+az storage account create -g $RG -n $SA2 -l $LOC --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false --public-network-access Disabled -o none
+SA2_ID=$(az storage account show -g $RG -n $SA2 --query id -o tsv)
+az network private-endpoint create -g $RG -n pe-sa2 -l $LOC --vnet-name vnet-spoke --subnet snet-data --private-connection-resource-id $SA2_ID --group-id blob --connection-name pe-sa2-conn -o none
+az network private-dns zone create -g $RG -n privatelink.blob.core.windows.net -o none
+az network private-dns link vnet create -g $RG -z privatelink.blob.core.windows.net -n link-spoke -v vnet-spoke -e false -o none
+az network private-dns link vnet create -g $RG -z privatelink.blob.core.windows.net -n link-hub -v vnet-hub -e false -o none
+az network private-endpoint dns-zone-group create -g $RG --endpoint-name pe-sa2 -n default --private-dns-zone privatelink.blob.core.windows.net --zone-name blob -o none
+```
+
+All returned no output (`-o none`).
+
+**From the internet (Cloud Shell)**
+
+```bash
 nslookup $SA2.blob.core.windows.net | tail -n 4
+```
+
+```text
+stpe2468.privatelink.blob.core.windows.net      canonical name = blob.jnb24prdstr03a.store.core.windows.net.
+Name:   blob.jnb24prdstr03a.store.core.windows.net
+Address: 20.209.131.33
+```
+
+**From inside the VNets (vm-hub)**
+
+```bash
 vmrun vm-hub "getent hosts $SA2.blob.core.windows.net"
+```
+
+```text
+Enable succeeded:
+[stdout]
+10.20.2.4       stpe2468.privatelink.blob.core.windows.net stpe2468.blob.core.windows.net
+
+[stderr]
+```
+
+**Anonymous request from the internet**
+
+```bash
 curl -s --max-time 10 "https://$SA2.blob.core.windows.net/?comp=list" | grep -o '<Code>[^<]*</Code>'
 ```
 
 ```text
-<paste output>
+<Code>AuthorizationFailure</Code>
 ```
 
 **What this proves**
-- 
-- 
+- **The same name resolves to two different addresses depending on where you ask.** From the internet, `stpe2468.blob.core.windows.net` is a CNAME to `stpe2468.privatelink.blob.core.windows.net` and on to the storage stamp's **public IP** (`20.209.131.33`). From vm-hub, the private DNS zone `privatelink.blob.core.windows.net` answers first and returns the private endpoint's **private IP, `10.20.2.4`**.
+- `10.20.2.4` is in **snet-data** (10.20.2.0/24, spoke): the private endpoint is a NIC in the VNet, taking the first free address (`.4`) like any VM would.
+- vm-hub is in the **hub**, yet it resolved the private IP and can reach it: the DNS zone is linked to **both** VNets, and the traffic crosses the **peering**. Without the `link-hub` link, vm-hub would get the public IP and be refused.
+- Applications keep using the normal name (`stpe2468.blob.core.windows.net`); no connection strings change. The `privatelink` CNAME is what lets private DNS take over the answer inside the VNet.
+- From the internet the request is refused with `AuthorizationFailure`: `--public-network-access Disabled` means the account's public endpoint accepts **nothing**, not even from allow-listed networks. The private endpoint is now the only way in.
+- **Service endpoint vs private endpoint:** SA1 (step 8) still has a public endpoint and admits chosen subnets; SA2 has no public access at all and gets a private IP inside the VNet, reachable from peered VNets (and, with a VPN or ExpressRoute, from on-premises).
 
 ![Private endpoint DNS](14-private-endpoint-dns.png)
 ![Private endpoint](15-private-endpoint.png)
