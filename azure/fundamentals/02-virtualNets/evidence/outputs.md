@@ -61,7 +61,6 @@ snet-data  10.20.2.0/24  True
 - `snet-web` and `snet-shared` are **private subnets** (`DefaultOutbound: False`): VMs in them get no implicit internet access. `snet-data` explicitly keeps default outbound so the storage endpoint tests later aren't affected by it. `AzureBastionSubnet` shows no value because the setting was left at the platform default.
 - The portal shows **251 available IPs** in each /24: 256 addresses minus the 5 Azure reserves in every subnet (network address, default gateway, two for Azure DNS, and broadcast).
 
-![Resource group with both VNets](01-resource-group.png)
 ![VNets and subnets](02-vnets-subnets.png)
 
 ## Step 2: Peering
@@ -133,8 +132,8 @@ rtt min/avg/max/mdev = 1.008/1.486/1.826/0.348 ms
 - The ping ran through **Run Command**, which goes through the VM agent and the Azure platform, not the network. That's how a VM with no public IP and no Bastion can still be managed.
 - Two VMs, not three: see [troubleshooting.md](../troubleshooting.md) entries 2 and 3 (capacity and the 4 vCPU quota).
 
-![04a Resource group: VMs, disks and NICs, no public IP resources](04a-vms-resource-group.png)
-![04b Virtual machines: Public IP address column empty](04b-vms-no-public-ip.png)
+![01 Resource group: VNets, VMs, disks and NICs, no public IP resources](01-resource-group.png)
+![04 Virtual machines: Public IP address column empty](04-vms-no-public-ip.png)
 
 ## Step 5: Bastion Basic (created, used, deleted)
 
