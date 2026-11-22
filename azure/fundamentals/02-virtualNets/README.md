@@ -86,6 +86,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 12 | Service endpoint | Storage firewall: selected networks only, vnet-hub allowed |
 | 13a / 13b | Service endpoint | vm-hub's effective routes include `VirtualNetworkServiceEndpoint` next hops for Storage address ranges (portal, then filtered in the CLI) |
 | 14 | Private endpoint | SA2 resolves to its public IP from the internet and to 10.20.2.4 from vm-hub; anonymous internet request refused |
+| 15 | Private endpoint | pe-sa2 DNS configuration: NIC at 10.20.2.4, A record in privatelink.blob.core.windows.net via zone group |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -103,6 +104,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![13a Service endpoint routes in the portal](evidence/13a-service-endpoint-routes.png)
 ![13b Service endpoint routes from the CLI](evidence/13b-service-endpoint-routes-cli.png)
 ![14 Private endpoint DNS](evidence/14-private-endpoint-dns.png)
+![15 Private endpoint configuration](evidence/15-private-endpoint.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

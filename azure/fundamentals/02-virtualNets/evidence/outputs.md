@@ -454,7 +454,9 @@ curl -s --max-time 10 "https://$SA2.blob.core.windows.net/?comp=list" | grep -o 
 - **Service endpoint vs private endpoint:** SA1 (step 8) still has a public endpoint and admits chosen subnets; SA2 has no public access at all and gets a private IP inside the VNet, reachable from peered VNets (and, with a VPN or ExpressRoute, from on-premises).
 
 ![Private endpoint DNS](14-private-endpoint-dns.png)
-![Private endpoint](15-private-endpoint.png)
+The private endpoint's **DNS configuration** in the portal ties it together: the endpoint's NIC (`pe-sa2.nic...`) holds `10.20.2.4`; the customer-visible FQDN is `stpe2468.blob.core.windows.net`; and the DNS zone group `default` registered `stpe2468.privatelink.blob.core.windows.net -> 10.20.2.4` in the private DNS zone `privatelink.blob.core.windows.net` automatically. That automatic record is why the zone group step matters: without it, the A record would have to be created and kept in sync by hand.
+
+![Private endpoint DNS configuration](15-private-endpoint.png)
 
 ## Step 10: Cleanup
 
