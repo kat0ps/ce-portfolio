@@ -213,17 +213,30 @@ HTTP 000
 **After the NAT gateway**
 
 ```bash
-echo "NAT IP: $NAT_IP"
+az network public-ip create -g $RG -n pip-nat -l $LOC --sku Standard -o none
+az network nat gateway create -g $RG -n nat-web -l $LOC --public-ip-addresses pip-nat --idle-timeout 4 -o none
+az network vnet subnet update -g $RG --vnet-name vnet-spoke -n snet-web --nat-gateway nat-web -o none
+NAT_IP=$(az network public-ip show -g $RG -n pip-nat --query ipAddress -o tsv); echo "NAT IP: $NAT_IP"
 vmrun vm-web "curl -s -o /dev/null -w 'HTTP %{http_code}\n' --max-time 10 https://www.microsoft.com; echo -n 'Egress IP: '; curl -s --max-time 10 https://ifconfig.me; echo"
 ```
 
 ```text
-<paste output>
+NAT IP: 102.133.162.140
+Enable succeeded:
+[stdout]
+HTTP 200
+Egress IP: 102.133.162.140
+
+[stderr]
 ```
 
 **What this proves**
-- 
-- 
+- **Before:** `HTTP 000`. snet-web is a private subnet (`defaultOutboundAccess: false`, step 1), so a VM there with no public IP has **no internet access at all**. Since September 2025, new VNets default to this behaviour; the old "default outbound access" is retired for them.
+- **After:** `HTTP 200` with no change to the VM. Only the **subnet** changed: attaching the NAT gateway gave every VM in snet-web outbound access.
+- The **egress IP matches the NAT gateway's public IP** (`102.133.162.140`): all outbound traffic from the subnet leaves from one static, predictable address. That's what you'd give a partner to allow-list.
+- NAT gateway is **outbound only**: connections can't be started from the internet to the VM through it, so the VM is still unreachable from outside.
+- The portal shows the NAT gateway is attached to **snet-web only**; snet-data isn't affected.
+- `pip-nat` is a **Standard** SKU public IP (static by default). NAT gateway doesn't accept Basic SKU IPs, which are retired anyway.
 
 ![Outbound blocked](06-outbound-blocked.png)
 ![Outbound fixed](07-outbound-fixed.png)
