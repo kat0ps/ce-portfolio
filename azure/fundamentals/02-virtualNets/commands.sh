@@ -22,7 +22,11 @@ VMSIZE=Standard_B1s
 ADMIN=azureuser
 EOF
 source ~/vnetfun.env
-read -s -p "VM admin password (12+ chars, upper, lower, digit, symbol): " VMPW; echo
+# Azure needs 12-72 chars with 3 of: lower, upper, digit, symbol. Loop until it passes,
+# because a bad or empty password only fails later, at az vm create.
+until [[ ${#VMPW} -ge 12 && "$VMPW" =~ [a-z] && "$VMPW" =~ [A-Z] && "$VMPW" =~ [0-9] && "$VMPW" =~ [^a-zA-Z0-9] ]]; do
+  read -s -p "VM admin password (12+ chars, upper, lower, digit, symbol): " VMPW; echo
+done; echo "Password OK (${#VMPW} chars)"
 
 # ---------- 1. Resource group, hub and spoke VNets ----------
 az group create -n $RG -l $LOC -o table
