@@ -247,13 +247,34 @@ Egress IP: 102.133.162.140
 **With the route table attached**
 
 ```bash
+az network route-table create -g $RG -n rt-web -l $LOC -o none
+az network route-table route create -g $RG --route-table-name rt-web -n hub-blackhole --address-prefix 10.10.0.0/16 --next-hop-type None -o none
+az network vnet subnet update -g $RG --vnet-name vnet-spoke -n snet-web --route-table rt-web -o none
 az network watcher show-next-hop -g $RG --vm vm-web --source-ip $WEB_IP --dest-ip $HUB_IP -o table
+```
+
+```text
+NextHopType    RouteTableId
+-------------  --------------------------------------------------------------------------------------------------
+None           /subscriptions/<subscription-id>/resourceGroups/rg-vnetfun-netmon/providers/Microsoft.Network/routeTables/rt-web
+```
+
+```bash
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 ```
 
 ```text
-<paste output>
+Enable succeeded:
+[stdout]
+PING 10.10.1.4 (10.10.1.4) 56(84) bytes of data.
+
+--- 10.10.1.4 ping statistics ---
+3 packets transmitted, 0 received, 100% packet loss, time 2045ms
+
+[stderr]
 ```
+
+> In the portal's Next hop tool, the **source** VM must be the one sending the traffic (vm-web). Selecting vm-hub returned `DestinationIpMatchedToNicIp`: the destination can't be the selected VM's own IP.
 
 **After removing it**
 

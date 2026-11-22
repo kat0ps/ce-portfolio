@@ -80,6 +80,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 06 | Outbound | vm-web on a private subnet: `HTTP 000`, no internet access |
 | 07 | Outbound | After the NAT gateway: `HTTP 200`, egress IP equals the NAT public IP |
 | 08 | NAT gateway | nat-web attached to snet-web only |
+| 09 | UDR | Next hop from vm-web to vm-hub is **None**, caused by route table rt-web |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -90,6 +91,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![06 Outbound blocked](evidence/06-outbound-blocked.png)
 ![07 Outbound fixed](evidence/07-outbound-fixed.png)
 ![08 NAT gateway](evidence/08-nat-gateway.png)
+![09 Next hop None](evidence/09-next-hop-none.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 
