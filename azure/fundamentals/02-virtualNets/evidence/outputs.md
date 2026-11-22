@@ -12,7 +12,7 @@ RG=rg-vnetfun-netmon
 LOC=southafricanorth
 SA1=stsvcep2648
 SA2=stpe2468
-VMSIZE=Standard_B1s
+VMSIZE=Standard_B2ats_v2
 ADMIN=azureuser
 EOF
 source ~/vnetfun.env
@@ -95,10 +95,11 @@ spoke-to-hub  Connected  FullyInSync
 ![Peering from the hub: hub-to-spoke](03a-peering-connected.png)
 ![Peering from the spoke: spoke-to-hub](03b-peering-connected.png)
 
-## Step 3: VMs with no public IP
+## Step 3: Two VMs with no public IP
 
 ```bash
-az vm list -g $RG -d --query "[].{name:name, state:powerState, privateIp:privateIps, publicIp:publicIps}" -o table
+az vm list -g $RG -d --query "[].{name:name, size:hardwareProfile.vmSize, state:powerState, privateIp:privateIps, publicIp:publicIps}" -o table
+az vm list-usage -l $LOC --query "[?name.value=='cores'].{used:currentValue, limit:limit}" -o table
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 ```
 
@@ -194,10 +195,10 @@ vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 ![Next hop None](09-next-hop-none.png)
 ![Next hop VNetPeering](10-next-hop-peering.png)
 
-## Step 8: Service endpoint (SA1)
+## Step 8: Service endpoint (SA1, allowed from the hub subnet only)
 
 ```bash
-for VM in vm-data vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
+for VM in vm-hub vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
 ```
 
 ```text
@@ -216,7 +217,7 @@ for VM in vm-data vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'ht
 
 ```bash
 nslookup $SA2.blob.core.windows.net | tail -n 4
-vmrun vm-data "getent hosts $SA2.blob.core.windows.net"
+vmrun vm-hub "getent hosts $SA2.blob.core.windows.net"
 curl -s --max-time 10 "https://$SA2.blob.core.windows.net/?comp=list" | grep -o '<Code>[^<]*</Code>'
 ```
 

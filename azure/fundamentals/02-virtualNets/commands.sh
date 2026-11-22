@@ -2,7 +2,7 @@
 # Run in Azure Cloud Shell (Bash). Paste ONE section at a time and read the output.
 # 📸 marks a screenshot checkpoint (file name in evidence/).
 #
-# COST: Bastion Basic, the NAT gateway, public IPs, the 3 VMs and the private endpoint
+# COST: Bastion Basic, the NAT gateway, public IPs, the 2 VMs and the private endpoint
 # are billed per hour while they exist. Do the lab in one sitting and run section 10.
 # Bastion is created and deleted inside section 5 to keep its cost to minutes.
 #
@@ -18,7 +18,7 @@ RG=rg-vnetfun-netmon
 LOC=southafricanorth
 SA1=stsvcep2648
 SA2=stpe2468
-VMSIZE=Standard_B1s
+VMSIZE=Standard_B2ats_v2
 ADMIN=azureuser
 EOF
 source ~/vnetfun.env
@@ -62,18 +62,21 @@ az network vnet peering list -g $RG --vnet-name vnet-spoke --query "[].{name:nam
 # 📸 03a-peering-connected.png  Portal: vnet-hub > Settings > Peerings (hub-to-spoke Connected)
 # 📸 03b-peering-connected.png  Portal: vnet-spoke > Settings > Peerings (spoke-to-hub Connected)
 
-# ---------- 3. Three VMs with no public IP ----------
+# ---------- 3. Two VMs with no public IP ----------
 # --public-ip-address "" = no public IP. --nsg "" = no NIC-level NSG (no inbound path exists anyway).
-# If you get SkuNotAvailable, set VMSIZE=Standard_B2ats_v2 in ~/vnetfun.env and re-run.
-for VM in "vm-hub vnet-hub snet-shared" "vm-web vnet-spoke snet-web" "vm-data vnet-spoke snet-data"; do
-  set -- $VM
-  az vm create -g $RG -n $1 -l $LOC --image Ubuntu2404 --size $VMSIZE \
-    --vnet-name $2 --subnet $3 --public-ip-address "" --nsg "" \
-    --admin-username $ADMIN --admin-password "$VMPW" --authentication-type password \
-    --no-wait
-done
-az vm wait -g $RG -n vm-data --created     # about 2-4 minutes
-az vm list -g $RG -d --query "[].{name:name, state:powerState, privateIp:privateIps, publicIp:publicIps}" -o table
+# Two VMs, not three: B1s/B1ms/B1ls had no capacity in South Africa North and this subscription's
+# regional quota is 4 vCPUs, so 2 x Standard_B2ats_v2 (2 vCPU each) is the maximum. vm-hub also does the
+# storage endpoint tests (sections 8-9). See troubleshooting.md entries 2-4.
+# --no-wait is deliberately NOT used: if a create fails you see the error straight away, and nothing waits
+# forever for a VM that will never exist.
+az vm create -g $RG -n vm-hub -l $LOC --image Ubuntu2404 --size $VMSIZE \
+  --vnet-name vnet-hub --subnet snet-shared --public-ip-address "" --nsg "" \
+  --admin-username $ADMIN --admin-password "$VMPW" --authentication-type password -o none
+az vm create -g $RG -n vm-web -l $LOC --image Ubuntu2404 --size $VMSIZE \
+  --vnet-name vnet-spoke --subnet snet-web --public-ip-address "" --nsg "" \
+  --admin-username $ADMIN --admin-password "$VMPW" --authentication-type password -o none
+az vm list -g $RG -d --query "[].{name:name, size:hardwareProfile.vmSize, state:powerState, privateIp:privateIps, publicIp:publicIps}" -o table
+az vm list-usage -l $LOC --query "[?name.value=='cores'].{used:currentValue, limit:limit}" -o table
 HUB_IP=$(az vm show -g $RG -n vm-hub -d --query privateIps -o tsv)
 WEB_IP=$(az vm show -g $RG -n vm-web -d --query privateIps -o tsv)
 echo "HUB_IP=$HUB_IP" >> ~/vnetfun.env; echo "WEB_IP=$WEB_IP" >> ~/vnetfun.env
@@ -128,30 +131,31 @@ az network watcher show-next-hop -g $RG --vm vm-web --source-ip $WEB_IP --dest-i
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"       # replies again
 # 📸 10-next-hop-peering.png  Portal: Network Watcher > Next hop again (VNetPeering)
 
-# ---------- 8. Service endpoint: storage SA1 only reachable from snet-data ----------
-az network vnet subnet update -g $RG --vnet-name vnet-spoke -n snet-data \
+# ---------- 8. Service endpoint: storage SA1 only reachable from snet-shared (hub) ----------
+az network vnet subnet update -g $RG --vnet-name vnet-hub -n snet-shared \
   --service-endpoints Microsoft.Storage -o none
 az storage account create -g $RG -n $SA1 -l $LOC --sku Standard_LRS --kind StorageV2 \
   --min-tls-version TLS1_2 --allow-blob-public-access false -o none
-az storage account network-rule add -g $RG --account-name $SA1 --vnet-name vnet-spoke --subnet snet-data -o none
+az storage account network-rule add -g $RG --account-name $SA1 --vnet-name vnet-hub --subnet snet-shared -o none
 az storage account update -g $RG -n $SA1 --default-action Deny -o none
 sleep 60    # network rules take a minute to apply
-# Same anonymous request from both spoke subnets. The storage error code tells you which network check passed:
+# Same anonymous request from both VMs. The storage error code tells you which network check passed:
 #   AuthorizationFailure          = blocked by the storage firewall (network)
 #   NoAuthenticationInformation   = network allowed, but no credentials sent (expected for an anonymous call)
-for VM in vm-data vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
-# 📸 11-service-endpoint-test.png    This terminal output (different code for vm-data and vm-web)
-# 📸 12-storage-firewall.png         Portal: SA1 > Security + networking > Networking (Selected networks, snet-data)
-# 📸 13-service-endpoint-routes.png  Portal: vm-data > Networking > NIC > Help > Effective routes
+for VM in vm-hub vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
+# 📸 11-service-endpoint-test.png    This terminal output (different code for vm-hub and vm-web)
+# 📸 12-storage-firewall.png         Portal: SA1 > Security + networking > Networking (Selected networks, snet-shared)
+# 📸 13-service-endpoint-routes.png  Portal: vm-hub > Networking > NIC > Help > Effective routes
 #                                    (VirtualNetworkServiceEndpoint next hop for storage prefixes)
 
 # ---------- 9. Private endpoint: SA2 has no public access, reachable on a private IP ----------
+# The endpoint sits in snet-data (spoke); vm-hub reaches it across the peering.
 az storage account create -g $RG -n $SA2 -l $LOC --sku Standard_LRS --kind StorageV2 \
   --min-tls-version TLS1_2 --allow-blob-public-access false --public-network-access Disabled -o none
 SA2_ID=$(az storage account show -g $RG -n $SA2 --query id -o tsv)
 az network private-endpoint create -g $RG -n pe-sa2 -l $LOC --vnet-name vnet-spoke --subnet snet-data \
   --private-connection-resource-id $SA2_ID --group-id blob --connection-name pe-sa2-conn -o none
-# Private DNS so the normal name resolves to the private IP inside the VNets
+# Private DNS so the normal name resolves to the private IP inside the VNets (linked to BOTH VNets)
 az network private-dns zone create -g $RG -n privatelink.blob.core.windows.net -o none
 az network private-dns link vnet create -g $RG -z privatelink.blob.core.windows.net -n link-spoke -v vnet-spoke -e false -o none
 az network private-dns link vnet create -g $RG -z privatelink.blob.core.windows.net -n link-hub   -v vnet-hub   -e false -o none
@@ -159,9 +163,9 @@ az network private-endpoint dns-zone-group create -g $RG --endpoint-name pe-sa2 
   --private-dns-zone privatelink.blob.core.windows.net --zone-name blob -o none
 
 echo "== From Cloud Shell (internet):"; nslookup $SA2.blob.core.windows.net | tail -n 4
-echo "== From vm-data (inside the VNet):"; vmrun vm-data "getent hosts $SA2.blob.core.windows.net"
+echo "== From vm-hub (inside the hub VNet, across the peering):"; vmrun vm-hub "getent hosts $SA2.blob.core.windows.net"
 echo "== Anonymous request from Cloud Shell:"; curl -s --max-time 10 "https://$SA2.blob.core.windows.net/?comp=list" | grep -o '<Code>[^<]*</Code>'
-# Expect: public IP from Cloud Shell, 10.20.2.x from vm-data, and a public-access error from Cloud Shell.
+# Expect: public IP from Cloud Shell, 10.20.2.x from vm-hub, and a public-access error from Cloud Shell.
 # 📸 14-private-endpoint-dns.png  This terminal output
 # 📸 15-private-endpoint.png      Portal: pe-sa2 > Settings > DNS configuration (FQDN -> 10.20.2.x)
 

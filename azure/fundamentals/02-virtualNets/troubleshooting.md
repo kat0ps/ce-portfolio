@@ -24,3 +24,55 @@ done; echo "Password OK (${#VMPW} chars)"
 ```
 
 **Lesson:** validate secrets at the point they're entered, not at the point they're used. `${#VMPW}` shows the length without ever printing the password.
+
+## 2. Standard_B1s not available (capacity)
+
+**Section:** 3
+
+**Error:**
+
+```text
+(SkuNotAvailable) The requested VM size for resource 'Following SKUs have failed for Capacity Restrictions:
+Standard_B1s' is currently not available in location 'SouthAfricaNorth'.
+```
+
+**Cause:** Azure had no spare capacity for that size in the region. It's a temporary, regional condition, not a problem with the subscription or the command. The Azure CLI also printed a long Python traceback (`The content for this response was already consumed`) around the real error; that's a CLI display bug, and the useful line is the `SkuNotAvailable` one.
+
+**Fix:** try other small sizes in order and keep the first that works. `Standard_B2ats_v2` (2 vCPU, burstable, AMD) succeeded. `Standard_B1ms` and `Standard_B1ls`, from the same older B-series family as B1s, were also out of capacity.
+
+```bash
+for SIZE in Standard_B2ats_v2 Standard_B2als_v2 Standard_B2s; do
+  az vm create ... --size $SIZE -o none && { echo "OK: $SIZE"; break; }
+done
+```
+
+## 3. Regional vCPU quota exceeded
+
+**Section:** 3
+
+**Error:**
+
+```text
+(QuotaExceeded) Operation could not be completed as it results in exceeding approved Total Regional Cores quota.
+Location: SouthAfricaNorth, Current Limit: 4, Current Usage: 4, Additional Required: 2
+```
+
+**Cause:** the subscription allows **4 vCPUs per region**. Two B2ats_v2 VMs (2 vCPU each) used all 4, so the third VM was refused. Checked with:
+
+```bash
+az vm list-usage -l $LOC --query "[?name.value=='cores'].{used:currentValue, limit:limit}" -o table
+```
+
+**Fix:** a 1-vCPU size wasn't available (entry 2), so the lab runs with **two VMs**. vm-hub takes over the storage endpoint tests: the service endpoint is on the hub's `snet-shared`, and the private endpoint (still in the spoke's `snet-data`) is tested from vm-hub across the peering. The other option is a quota increase request (Quotas > Compute > Total Regional vCPUs), which free-trial subscriptions usually can't get.
+
+**Lesson:** check quota *before* sizing a deployment. Capacity (entry 2) and quota are different problems: capacity is Azure's side and changes over time; quota is the subscription's limit and only changes by request.
+
+## 4. Terminal "stuck" after a failed VM create
+
+**Section:** 3
+
+**Symptom:** after the quota error, Cloud Shell sat with no prompt and ignored typing.
+
+**Cause:** the next line was `az vm wait -g $RG -n vm-data --created`, which waits (up to an hour) for a VM that was never created because its `--no-wait` create had failed.
+
+**Fix:** **Ctrl + C** to cancel the wait; nothing is deleted. `commands.sh` no longer uses `--no-wait` and `az vm wait` for the VMs, so a failed create shows its error immediately.

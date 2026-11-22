@@ -9,7 +9,7 @@ RG=rg-vnetfun-netmon
 LOC=southafricanorth
 SA1=stsvcep2648
 SA2=stpe2468
-VMSIZE=Standard_B1s
+VMSIZE=Standard_B2ats_v2
 ADMIN=azureuser
 ```
 
@@ -34,18 +34,19 @@ while making commands repeatable across sessions.
 - Hub VNet (10.10.0.0/16) with a shared subnet and a dedicated AzureBastionSubnet
 - Spoke VNet (10.20.0.0/16) with a web subnet and a data subnet
 - Bidirectional VNet peering between hub and spoke
-- Three VMs with no public IPs (admin access via Bastion only)
+- Two VMs with no public IPs (admin access via Bastion only): one in the hub, one in the spoke web subnet
 - Azure Bastion Basic in the hub, reaching a spoke VM across the peering (deployed briefly, then deleted to stop the hourly charge)
 - NAT gateway on the spoke web subnet for controlled outbound access
 - UDR experiment: blackholed hub-bound traffic, proved it with Next hop, removed it
-- A storage account locked to the data subnet with a **service endpoint**
-- A second storage account with public access disabled, reachable only through a **private endpoint** and private DNS
+- A storage account locked to the hub's shared subnet with a **service endpoint**
+- A second storage account with public access disabled, reachable only through a **private endpoint** in the spoke data subnet and private DNS, tested from the hub VM across the peering
 
 ### Why I made these decisions
 - Hub-spoke separates shared services (Bastion, DNS) from workloads
 - No public IPs on VMs reduces the attack surface
 - NAT gateway gives predictable outbound with a single static IP rather than per-VM public IPs
 - UDR next hop None proves you can inspect and override Azure's system routes
+- Two VMs instead of the planned three: the small B-series sizes had no capacity in South Africa North and the subscription allows 4 vCPUs per region, so 2 x B2ats_v2 is the limit. The hub VM covers the storage tests instead (see [troubleshooting.md](troubleshooting.md))
 - Bastion Basic, not the free Developer tier, because Developer doesn't support connecting to VMs in peered VNets
 - Service endpoint vs private endpoint side by side: a service endpoint keeps the storage public endpoint but only admits chosen subnets; a private endpoint gives storage a private IP inside the VNet and lets public access be switched off entirely
 
@@ -62,7 +63,7 @@ See [commands.sh](commands.sh).
 | NAT gateway | Attached to snet-web | |
 | Outbound from VM | HTTP 200 after NAT gateway | |
 | UDR next hop | None while attached, peering route after removal | |
-| Service endpoint | Storage reachable from snet-data only | |
+| Service endpoint | Storage reachable from snet-shared only | |
 | Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | |
 | Cleanup | Resource group deleted | |
 
