@@ -65,10 +65,10 @@ See [commands.sh](commands.sh).
 | UDR next hop | None while attached, peering route after removal | None (rt-web) with 100% ping loss; VirtualNetworkPeering and 0% loss after removal |
 | Service endpoint | Storage reachable from snet-shared only | vm-hub passes the firewall (PublicAccessNotPermitted); vm-web blocked (AuthorizationFailure) |
 | Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | 10.20.2.4 from vm-hub (across the peering), 20.209.131.33 from the internet; AuthorizationFailure from the internet |
-| Cleanup | Resource group deleted | |
+| Cleanup | Resource group deleted | `az group delete` accepted; resource group showing Deleting |
 
 #### Screenshots
-Subscription IDs, tenant names and account names are blurred. Added as each step is completed.
+Subscription IDs, tenant names and account names are blurred.
 
 | # | Step | What it shows |
 |---|------|---------------|
@@ -87,6 +87,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 13a / 13b | Service endpoint | vm-hub's effective routes include `VirtualNetworkServiceEndpoint` next hops for Storage address ranges (portal, then filtered in the CLI) |
 | 14 | Private endpoint | SA2 resolves to its public IP from the internet and to 10.20.2.4 from vm-hub; anonymous internet request refused |
 | 15 | Private endpoint | pe-sa2 DNS configuration: NIC at 10.20.2.4, A record in privatelink.blob.core.windows.net via zone group |
+| 16 | Cleanup | Resource group deleting |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -105,13 +106,31 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![13b Service endpoint routes from the CLI](evidence/13b-service-endpoint-routes-cli.png)
 ![14 Private endpoint DNS](evidence/14-private-endpoint-dns.png)
 ![15 Private endpoint configuration](evidence/15-private-endpoint.png)
+![16 Cleanup](evidence/16-cleanup.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 
 ### What I learned
-- Peering is non-transitive: A-B and B-C does not give A-C
-- Azure reserves 5 IPs per subnet; a /26 gives 59 usable addresses
-- A UDR with next hop None silently drops traffic with no ICMP error
-- Standard public IPs are static by default; Basic SKU is retired
-- Newer VNets use private subnets by default, so VMs need a NAT gateway or public IP for outbound
+- **Peering is two links and non-transitive.** Each side shows Connected only once both links exist, and A-B plus B-C does not give A-C.
+- **Azure reserves 5 IPs per subnet.** The portal showed 251 usable in each /24, and every VM and the private endpoint took `.4`, the first free address. A /26 gives 59 usable.
+- **Private subnets have no internet by default.** vm-web returned `HTTP 000` until a NAT gateway was attached to its subnet; then `HTTP 200`, with every request leaving from the NAT gateway's single static IP. Nothing on the VM changed.
+- **A UDR with next hop None silently drops traffic.** Ping showed 100% loss with no ICMP error; Next hop named the route table responsible. A user route beats the system peering route for the same prefix, and removing it restored `VirtualNetworkPeering`.
+- **Diagnostics can lag a change.** Next hop still said None for about a minute after the route table was removed, while ping already worked. Re-check a minute later before trusting a diagnostic over a live test.
+- **Bastion Developer doesn't work across peering.** Reaching a spoke VM from a hub Bastion needed the Basic tier, which is billed by the hour, so it was created, used and deleted inside 20 minutes.
+- **Run Command manages VMs without any network path.** It goes through the VM agent, so VMs with no public IP and no Bastion could still be tested.
+- **Service endpoint vs private endpoint.** A service endpoint keeps the storage public endpoint but lets the storage firewall allow a subnet by name (vm-hub passed, vm-web got `AuthorizationFailure`). A private endpoint gives storage a private IP in the VNet (`10.20.2.4`) and lets public access be turned off completely.
+- **Private endpoints depend on DNS.** The same name resolved to a public IP from the internet and to `10.20.2.4` inside the VNets, because a private DNS zone was linked to **both** VNets. The zone group created the A record automatically.
+- **Read the error code, not just "it failed".** `PublicAccessNotPermitted` (passed the firewall, no anonymous access) and `AuthorizationFailure` (blocked by the firewall) look similar but mean different layers.
+- **Capacity and quota are different problems.** B1s, B1ms and B1ls were out of capacity in South Africa North (Azure's side, temporary); the subscription's 4 vCPU regional quota capped the lab at two 2-vCPU VMs (the subscription's limit, changed only by request).
+- **Standard public IPs are static by default; Basic SKU is retired.** NAT gateway and Bastion both require Standard.
+
+### Reference
+- [Virtual network peering](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview)
+- [Default outbound access and private subnets](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)
+- [NAT gateway](https://learn.microsoft.com/en-us/azure/nat-gateway/nat-overview)
+- [Virtual network traffic routing](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-udr-overview)
+- [Network Watcher next hop](https://learn.microsoft.com/en-us/azure/network-watcher/next-hop-overview)
+- [Azure Bastion SKU comparison](https://learn.microsoft.com/en-us/azure/bastion/bastion-sku-comparison)
+- [Virtual network service endpoints](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview)
+- [Private endpoint DNS configuration](https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-dns)
 

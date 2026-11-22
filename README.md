@@ -20,7 +20,7 @@ Business problems solved end to end with Bicep and scripts that deploy, verify a
 | Folder | Lab | Exam domain | Status |
 |--------|-----|-------------|--------|
 | [01-storage](azure/fundamentals/01-storage/) | Storage | 2. Storage | Planned |
-| [02-virtualNets](azure/fundamentals/02-virtualNets/) | 4.1 VNets, peering, public IPs and UDRs | 4. Networking | In progress |
+| [02-virtualNets](azure/fundamentals/02-virtualNets/) | 4.1 VNets, peering, public IPs, UDRs, service and private endpoints | 4. Networking | Complete |
 | [03-identityGovernance](azure/fundamentals/03-identityGovernance/) | 1.1 RBAC, Policy, tags and locks | 1. Identities and governance | Complete |
 
 ## Format

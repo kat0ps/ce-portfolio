@@ -464,8 +464,10 @@ The private endpoint's **DNS configuration** in the portal ties it together: the
 az group delete -n $RG --yes --no-wait
 ```
 
-```text
-<paste output, or note "no output">
-```
+No output: `--no-wait` returns immediately and Azure deletes everything in the group in the background. The portal showed the resource group as **Deleting**, with resources (NAT gateway, its public IP, the VNets) still being removed.
+
+- Deleting the **resource group** removes everything inside it in one step: VMs, disks, NICs, NAT gateway, public IP, route table, storage accounts, private endpoint and private DNS zone. That's why everything for the lab went into one group.
+- `NetworkWatcherRG` was left in place: it's created once per subscription, is free, and other labs use it.
+- Stopping charges was the point: Bastion was already gone (step 5), and this removed the NAT gateway, public IP, VMs and private endpoint, which were all billed per hour.
 
 ![Cleanup](16-cleanup.png)
