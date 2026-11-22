@@ -119,3 +119,19 @@ None
 **Fix:** waited about a minute and ran Next hop again from the portal: `VirtualNetworkPeering`, route table "System Route".
 
 **Lesson:** after a routing change, trust a live test (ping, curl) over a diagnostic view taken in the same second, and re-check the diagnostic a minute later. Also: the shell variables `$WEB_IP` and `$HUB_IP` were empty in this session (`--source-ip: expected one argument`), so they were set again by hand. `echo "[$WEB_IP]"` is a quick way to check before using one.
+
+## 7. Cloud Shell lost the env file after a long break
+
+**Section:** between 7 and 8 (after a 7-hour break with the VMs deallocated)
+
+**Error:**
+
+```text
+bash: /home/<user>/vnetfun.env: No such file or directory
+```
+
+**Cause:** the new Cloud Shell session started with an empty home directory. Cloud Shell only keeps files between sessions when it's set up with a storage account; an ephemeral session starts clean.
+
+**Fix:** recreated `~/vnetfun.env` from the known values, with the VM IPs and the `vmrun` helper included so one `source` restores everything. The VMs were started again with `az vm start`; their private IPs (10.10.1.4 and 10.20.1.4) were unchanged after the deallocate.
+
+**Lesson:** keep the env file's contents somewhere you can paste from (it holds no secrets, so the README documents it). Deallocating VMs over a break stops compute charges, but the NAT gateway and its public IP are billed hourly regardless.

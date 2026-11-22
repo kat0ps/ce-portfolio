@@ -63,7 +63,7 @@ See [commands.sh](commands.sh).
 | NAT gateway | Attached to snet-web | nat-web on snet-web with pip-nat (Standard) |
 | Outbound from VM | HTTP 200 after NAT gateway | HTTP 000 before, HTTP 200 after; egress IP = NAT IP |
 | UDR next hop | None while attached, peering route after removal | None (rt-web) with 100% ping loss; VirtualNetworkPeering and 0% loss after removal |
-| Service endpoint | Storage reachable from snet-shared only | |
+| Service endpoint | Storage reachable from snet-shared only | vm-hub passes the firewall (PublicAccessNotPermitted); vm-web blocked (AuthorizationFailure) |
 | Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | |
 | Cleanup | Resource group deleted | |
 
@@ -82,6 +82,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 08 | NAT gateway | nat-web attached to snet-web only |
 | 09 | UDR | Next hop from vm-web to vm-hub is **None**, caused by route table rt-web |
 | 10 | UDR | Route table removed: next hop is **VirtualNetworkPeering** (System Route) again |
+| 11 | Service endpoint | Same request: vm-hub passes the storage firewall (`PublicAccessNotPermitted`), vm-web is blocked (`AuthorizationFailure`) |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -94,6 +95,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![08 NAT gateway](evidence/08-nat-gateway.png)
 ![09 Next hop None](evidence/09-next-hop-none.png)
 ![10 Next hop VirtualNetworkPeering](evidence/10-next-hop-peering.png)
+![11 Service endpoint test](evidence/11-service-endpoint-test.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

@@ -143,8 +143,8 @@ az storage account network-rule add -g $RG --account-name $SA1 --vnet-name vnet-
 az storage account update -g $RG -n $SA1 --default-action Deny -o none
 sleep 60    # network rules take a minute to apply
 # Same anonymous request from both VMs. The storage error code tells you which network check passed:
-#   AuthorizationFailure          = blocked by the storage firewall (network)
-#   NoAuthenticationInformation   = network allowed, but no credentials sent (expected for an anonymous call)
+#   AuthorizationFailure       = blocked by the storage firewall (network)
+#   PublicAccessNotPermitted   = network allowed; refused only because anonymous access is disabled on the account
 for VM in vm-hub vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
 # 📸 11-service-endpoint-test.png    This terminal output (different code for vm-hub and vm-web)
 # 📸 12-storage-firewall.png         Portal: SA1 > Security + networking > Networking (Selected networks, snet-shared)
