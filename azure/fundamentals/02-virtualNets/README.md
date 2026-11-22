@@ -9,7 +9,11 @@ RG=rg-vnetfun-netmon
 LOC=southafricanorth
 SA1=stsvcep2648
 SA2=stpe2468
+VMSIZE=Standard_B1s
+ADMIN=azureuser
 ```
+
+The VM admin password is read with `read -s` at the start of each session, so it never lands in the env file, shell history or the repo.
 
 ```bash
 # Load variables
@@ -31,35 +35,52 @@ while making commands repeatable across sessions.
 - Spoke VNet (10.20.0.0/16) with a web subnet and a data subnet
 - Bidirectional VNet peering between hub and spoke
 - Three VMs with no public IPs (admin access via Bastion only)
+- Azure Bastion Basic in the hub, reaching a spoke VM across the peering (deployed briefly, then deleted to stop the hourly charge)
 - NAT gateway on the spoke web subnet for controlled outbound access
 - UDR experiment: blackholed hub-bound traffic, proved it with Next hop, removed it
+- A storage account locked to the data subnet with a **service endpoint**
+- A second storage account with public access disabled, reachable only through a **private endpoint** and private DNS
 
 ### Why I made these decisions
 - Hub-spoke separates shared services (Bastion, DNS) from workloads
 - No public IPs on VMs reduces the attack surface
 - NAT gateway gives predictable outbound with a single static IP rather than per-VM public IPs
 - UDR next hop None proves you can inspect and override Azure's system routes
+- Bastion Basic, not the free Developer tier, because Developer doesn't support connecting to VMs in peered VNets
+- Service endpoint vs private endpoint side by side: a service endpoint keeps the storage public endpoint but only admits chosen subnets; a private endpoint gives storage a private IP inside the VNet and lets public access be switched off entirely
 
 ### Commands run
-```bash
-# paste your sanitised commands here as you run them
-```
+See [commands.sh](commands.sh).
 
 ### Verification evidence
 | Check | Expected | Result |
 |-------|----------|--------|
-| Resource group | Succeeded, southafricanorth | |
-| VNets | 10.10.0.0/16 and 10.20.0.0/16 | |
-| Peering state | Connected both sides | |
+| Resource group | Succeeded, southafricanorth | Created in southafricanorth |
+| VNets | 10.10.0.0/16 and 10.20.0.0/16 | Hub 10.10.0.0/16, spoke 10.20.0.0/16, no overlap |
+| Peering state | Connected both sides | Connected and FullyInSync on hub-to-spoke and spoke-to-hub |
 | VMs | Running, no public IP | |
 | NAT gateway | Attached to snet-web | |
 | Outbound from VM | HTTP 200 after NAT gateway | |
 | UDR next hop | None while attached, peering route after removal | |
+| Service endpoint | Storage reachable from snet-data only | |
+| Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | |
+| Cleanup | Resource group deleted | |
 
-![Peering Connected](evidence/01-peering-connected.png)
-![VMs no public IP](evidence/02-vms-no-public-ip.png)
-![Next hop UDR](evidence/03-next-hop-udr.png)
-![Outbound fixed](evidence/04-outbound-fixed.png)
+#### Screenshots
+Subscription IDs, tenant names and account names are blurred. Added as each step is completed.
+
+| # | Step | What it shows |
+|---|------|---------------|
+| 01 | VNets | Resource group in South Africa North with both VNets |
+| 02 | VNets | Spoke subnets: 251 usable IPs per /24 (Azure reserves 5) |
+| 03a / 03b | Peering | hub-to-spoke and spoke-to-hub, both Connected and Fully Synchronized |
+
+![01 Resource group](evidence/01-resource-group.png)
+![02 Spoke subnets](evidence/02-vnets-subnets.png)
+![03a Peering from the hub](evidence/03a-peering-connected.png)
+![03b Peering from the spoke](evidence/03b-peering-connected.png)
+
+Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 
 ### What I learned
 - Peering is non-transitive: A-B and B-C does not give A-C
