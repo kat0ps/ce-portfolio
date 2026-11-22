@@ -68,17 +68,32 @@ snet-data  10.20.2.0/24  True
 
 ```bash
 az network vnet peering list -g $RG --vnet-name vnet-hub   --query "[].{name:name, state:peeringState, sync:peeringSyncLevel}" -o table
+```
+
+```text
+Name          State      Sync
+------------  ---------  -----------
+hub-to-spoke  Connected  FullyInSync
+```
+
+```bash
 az network vnet peering list -g $RG --vnet-name vnet-spoke --query "[].{name:name, state:peeringState, sync:peeringSyncLevel}" -o table
 ```
 
 ```text
-<paste output>
+Name          State      Sync
+------------  ---------  -----------
+spoke-to-hub  Connected  FullyInSync
 ```
 
 **What this proves**
-- 
+- Peering is **two links, one in each direction**. Each side shows `Connected` only once both links exist; with just one created, its state stays `Initiated`.
+- `FullyInSync` means both VNets have the other's current address space. If a VNet's address space changes later, the peering has to be synced again.
+- **Virtual network gateway: Disabled** on both sides: no gateway transit, so the spoke only reaches the hub itself. Peering is also **non-transitive**, so a second spoke peered to the hub would not reach this spoke without extra routing.
+- **Cross-tenant: No**: both VNets are in the same subscription and tenant.
 
-![Peering connected](03-peering-connected.png)
+![Peering from the hub: hub-to-spoke](03a-peering-connected.png)
+![Peering from the spoke: spoke-to-hub](03b-peering-connected.png)
 
 ## Step 3: VMs with no public IP
 

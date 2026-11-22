@@ -55,7 +55,8 @@ az network vnet peering create -g $RG -n spoke-to-hub --vnet-name vnet-spoke \
   --remote-vnet vnet-hub --allow-vnet-access -o none
 az network vnet peering list -g $RG --vnet-name vnet-hub   --query "[].{name:name, state:peeringState, sync:peeringSyncLevel}" -o table
 az network vnet peering list -g $RG --vnet-name vnet-spoke --query "[].{name:name, state:peeringState, sync:peeringSyncLevel}" -o table
-# 📸 03-peering-connected.png  Portal: vnet-hub > Settings > Peerings (status Connected)
+# 📸 03a-peering-connected.png  Portal: vnet-hub > Settings > Peerings (hub-to-spoke Connected)
+# 📸 03b-peering-connected.png  Portal: vnet-spoke > Settings > Peerings (spoke-to-hub Connected)
 
 # ---------- 3. Three VMs with no public IP ----------
 # --public-ip-address "" = no public IP. --nsg "" = no NIC-level NSG (no inbound path exists anyway).
