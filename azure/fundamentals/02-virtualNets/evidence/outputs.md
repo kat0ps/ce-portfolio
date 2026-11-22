@@ -99,17 +99,39 @@ spoke-to-hub  Connected  FullyInSync
 
 ```bash
 az vm list -g $RG -d --query "[].{name:name, size:hardwareProfile.vmSize, state:powerState, privateIp:privateIps, publicIp:publicIps}" -o table
-az vm list-usage -l $LOC --query "[?name.value=='cores'].{used:currentValue, limit:limit}" -o table
+```
+
+```text
+Name    Size               State       PrivateIp    PublicIp
+------  -----------------  ----------  -----------  ----------
+vm-hub  Standard_B2ats_v2  VM running  10.10.1.4
+vm-web  Standard_B2ats_v2  VM running  10.20.1.4
+```
+
+```bash
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 ```
 
 ```text
-<paste output>
+Enable succeeded:
+[stdout]
+PING 10.10.1.4 (10.10.1.4) 56(84) bytes of data.
+64 bytes from 10.10.1.4: icmp_seq=1 ttl=64 time=1.63 ms
+64 bytes from 10.10.1.4: icmp_seq=2 ttl=64 time=1.83 ms
+64 bytes from 10.10.1.4: icmp_seq=3 ttl=64 time=1.01 ms
+
+--- 10.10.1.4 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2004ms
+rtt min/avg/max/mdev = 1.008/1.486/1.826/0.348 ms
 ```
 
 **What this proves**
-- 
-- 
+- Both VMs are running with **no public IP** (empty `PublicIp` column), and the resource group contains no Public IP address resources at all: there is no direct path in from the internet.
+- Each VM got the **first usable address** in its subnet, `.4`: `.0` to `.3` are reserved by Azure (network, gateway, DNS), which is where the 5 reserved IPs from step 1 go (plus `.255` for broadcast).
+- The spoke VM reached the hub VM (`0% packet loss`, about 1.5 ms) across the **peering**: traffic between peered VNets uses Microsoft's backbone with private IPs only.
+- `ttl=64` (unchanged from Linux's default) shows there was no router hop in between: peered VNets behave like one network.
+- The ping ran through **Run Command**, which goes through the VM agent and the Azure platform, not the network. That's how a VM with no public IP and no Bastion can still be managed.
+- Two VMs, not three: see [troubleshooting.md](../troubleshooting.md) entries 2 and 3 (capacity and the 4 vCPU quota).
 
 ![VMs with no public IP](04-vms-no-public-ip.png)
 
