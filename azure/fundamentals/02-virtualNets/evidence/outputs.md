@@ -25,18 +25,43 @@ No output. The variables live in a local env file, and the VM password is read w
 
 ```bash
 az group create -n $RG -l $LOC -o table
+```
+
+```text
+Location          Name
+----------------  -----------------
+southafricanorth  rg-vnetfun-netmon
+```
+
+```bash
 az network vnet subnet list -g $RG --vnet-name vnet-hub   --query "[].{name:name, prefix:addressPrefix, defaultOutbound:defaultOutboundAccess}" -o table
+```
+
+```text
+Name                Prefix         DefaultOutbound
+------------------  -------------  -----------------
+snet-shared         10.10.1.0/24   False
+AzureBastionSubnet  10.10.254.0/26
+```
+
+```bash
 az network vnet subnet list -g $RG --vnet-name vnet-spoke --query "[].{name:name, prefix:addressPrefix, defaultOutbound:defaultOutboundAccess}" -o table
 ```
 
 ```text
-<paste output>
+Name       Prefix        DefaultOutbound
+---------  ------------  -----------------
+snet-web   10.20.1.0/24  False
+snet-data  10.20.2.0/24  True
 ```
 
 **What this proves**
-- 
-- 
+- Two VNets with address spaces that don't overlap (10.10.0.0/16 hub, 10.20.0.0/16 spoke). Peering is refused between overlapping ranges, so this is decided before anything else is built.
+- `AzureBastionSubnet` uses the exact name Azure requires and is a /26, the minimum size for Bastion Basic and above.
+- `snet-web` and `snet-shared` are **private subnets** (`DefaultOutbound: False`): VMs in them get no implicit internet access. `snet-data` explicitly keeps default outbound so the storage endpoint tests later aren't affected by it. `AzureBastionSubnet` shows no value because the setting was left at the platform default.
+- The portal shows **251 available IPs** in each /24: 256 addresses minus the 5 Azure reserves in every subnet (network address, default gateway, two for Azure DNS, and broadcast).
 
+![Resource group with both VNets](01-resource-group.png)
 ![VNets and subnets](02-vnets-subnets.png)
 
 ## Step 2: Peering
@@ -70,7 +95,6 @@ vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 - 
 - 
 
-![Resource group](01-resource-group.png)
 ![VMs with no public IP](04-vms-no-public-ip.png)
 
 ## Step 5: Bastion Basic (created, used, deleted)
