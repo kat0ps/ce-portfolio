@@ -375,7 +375,25 @@ Enable succeeded:
 
 ![Service endpoint test](11-service-endpoint-test.png)
 ![Storage firewall](12-storage-firewall.png)
-![Service endpoint routes](13-service-endpoint-routes.png)
+![13a Service endpoint routes in the portal](13a-service-endpoint-routes.png)
+
+Filtered to only the service endpoint routes from the CLI:
+
+```bash
+az network nic show-effective-route-table -g $RG -n vm-hubVMNic \
+  --query "value[?nextHopType=='VirtualNetworkServiceEndpoint'].{prefixes:join(', ', addressPrefix[0:3]), nextHop:nextHopType, state:state}" -o table
+```
+
+```text
+Prefixes                                           NextHop                        State
+-------------------------------------------------  -----------------------------  -------
+57.150.226.0/23, 52.239.232.0/25, 20.209.208.0/23  VirtualNetworkServiceEndpoint  Active
+52.239.232.128/25, 20.157.228.0/24, 20.150.20.0/25 VirtualNetworkServiceEndpoint  Active
+```
+
+Two service endpoint routes, each covering a list of Azure Storage address ranges (only the first 3 prefixes of each are shown). Both are **Active**.
+
+![13b Service endpoint routes from the CLI](13b-service-endpoint-routes-cli.png)
 
 ## Step 9: Private endpoint (SA2)
 

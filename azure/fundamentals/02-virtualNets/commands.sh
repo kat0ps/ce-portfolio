@@ -148,8 +148,11 @@ sleep 60    # network rules take a minute to apply
 for VM in vm-hub vm-web; do echo "== $VM"; vmrun $VM "curl -s --max-time 10 'https://$SA1.blob.core.windows.net/?comp=list' | grep -o '<Code>[^<]*</Code>'"; done
 # 📸 11-service-endpoint-test.png    This terminal output (different code for vm-hub and vm-web)
 # 📸 12-storage-firewall.png         Portal: SA1 > Security + networking > Networking (Selected networks, snet-shared)
-# 📸 13-service-endpoint-routes.png  Portal: vm-hub > Networking > NIC > Help > Effective routes
-#                                    (VirtualNetworkServiceEndpoint next hop for storage prefixes)
+# 📸 13a-service-endpoint-routes.png  Portal: vm-hub > Networking > NIC > Help > Effective routes
+#                                     (VirtualNetworkServiceEndpoint next hop for storage prefixes)
+az network nic show-effective-route-table -g $RG -n vm-hubVMNic \
+  --query "value[?nextHopType=='VirtualNetworkServiceEndpoint'].{prefixes:join(', ', addressPrefix[0:3]), nextHop:nextHopType, state:state}" -o table
+# 📸 13b-service-endpoint-routes-cli.png  This terminal output (only the service endpoint routes)
 
 # ---------- 9. Private endpoint: SA2 has no public access, reachable on a private IP ----------
 # The endpoint sits in snet-data (spoke); vm-hub reaches it across the peering.
