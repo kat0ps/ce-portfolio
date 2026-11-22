@@ -62,7 +62,7 @@ See [commands.sh](commands.sh).
 | VMs | Running, no public IP | vm-hub 10.10.1.4 and vm-web 10.20.1.4, running, no public IP; spoke-to-hub ping 0% loss |
 | NAT gateway | Attached to snet-web | nat-web on snet-web with pip-nat (Standard) |
 | Outbound from VM | HTTP 200 after NAT gateway | HTTP 000 before, HTTP 200 after; egress IP = NAT IP |
-| UDR next hop | None while attached, peering route after removal | |
+| UDR next hop | None while attached, peering route after removal | None (rt-web) with 100% ping loss; VirtualNetworkPeering and 0% loss after removal |
 | Service endpoint | Storage reachable from snet-shared only | |
 | Private endpoint | Name resolves to 10.20.2.x inside the VNet, public access refused | |
 | Cleanup | Resource group deleted | |
@@ -81,6 +81,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 07 | Outbound | After the NAT gateway: `HTTP 200`, egress IP equals the NAT public IP |
 | 08 | NAT gateway | nat-web attached to snet-web only |
 | 09 | UDR | Next hop from vm-web to vm-hub is **None**, caused by route table rt-web |
+| 10 | UDR | Route table removed: next hop is **VirtualNetworkPeering** (System Route) again |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -92,6 +93,7 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![07 Outbound fixed](evidence/07-outbound-fixed.png)
 ![08 NAT gateway](evidence/08-nat-gateway.png)
 ![09 Next hop None](evidence/09-next-hop-none.png)
+![10 Next hop VirtualNetworkPeering](evidence/10-next-hop-peering.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

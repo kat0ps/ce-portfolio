@@ -279,17 +279,40 @@ PING 10.10.1.4 (10.10.1.4) 56(84) bytes of data.
 **After removing it**
 
 ```bash
-az network watcher show-next-hop -g $RG --vm vm-web --source-ip $WEB_IP --dest-ip $HUB_IP -o table
+az network vnet subnet update -g $RG --vnet-name vnet-spoke -n snet-web --remove routeTable -o none
 vmrun vm-web "ping -c 3 -W 2 $HUB_IP"
 ```
 
 ```text
-<paste output>
+Enable succeeded:
+[stdout]
+PING 10.10.1.4 (10.10.1.4) 56(84) bytes of data.
+64 bytes from 10.10.1.4: icmp_seq=1 ttl=64 time=1.45 ms
+64 bytes from 10.10.1.4: icmp_seq=2 ttl=64 time=1.00 ms
+64 bytes from 10.10.1.4: icmp_seq=3 ttl=64 time=1.07 ms
+
+--- 10.10.1.4 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 1.000/1.173/1.452/0.198 ms
+
+[stderr]
 ```
 
+Next hop, checked again a minute later in the portal (Network Watcher > Next hop, vm-web, 10.20.1.4 to 10.10.1.4):
+
+```text
+Next hop type:  VirtualNetworkPeering
+IP address:     -
+Route table ID: System Route
+```
+
+> Run straight after removing the route table, `az network watcher show-next-hop` still returned `None` (with no route table ID) even though the ping already worked. The effective routes behind Next hop take a minute or two to refresh. See [troubleshooting.md](../troubleshooting.md) entry 6.
+
 **What this proves**
-- 
-- 
+- A **user-defined route** overrides Azure's **system routes**: the peering route to 10.10.0.0/16 still existed, but the more specific-or-equal user route with next hop `None` won, and Next hop named `rt-web` as the cause.
+- Next hop `None` **drops packets silently**: the ping got no replies and no "destination unreachable" error, so to the VM it looks like the other side is down. That's why Next hop and effective routes are the first tools to reach for when traffic disappears.
+- Removing the route table restored the **system route** (`VirtualNetworkPeering`, route table "System Route") and the ping came straight back: the UDR was the only thing blocking it.
+- A route table is attached to a **subnet**, not a VM, so it affected every VM in snet-web and nothing in snet-data or the hub.
 
 ![Next hop None](09-next-hop-none.png)
 ![Next hop VNetPeering](10-next-hop-peering.png)

@@ -101,3 +101,21 @@ Then restarting Cloud Shell failed with `Request failed with status code 401`.
 **Lessons:**
 - Check whether a resource exists before re-running a create after an error; the request may have succeeded on Azure's side even if the client failed.
 - Paste long commands as a single line. A multi-line paste ran `az config set` but appeared to skip the next command.
+
+## 6. Next hop still said None after the route table was removed
+
+**Section:** 7
+
+**Symptom:** straight after `az network vnet subnet update ... --remove routeTable`, the ping from vm-web to vm-hub worked again, but Next hop still reported:
+
+```text
+NextHopType    RouteTableId
+-------------  --------------
+None
+```
+
+**Cause:** Next hop reads the NIC's **effective routes**, which take a minute or two to refresh after a route table change. The data path recovered immediately; the reporting lagged behind.
+
+**Fix:** waited about a minute and ran Next hop again from the portal: `VirtualNetworkPeering`, route table "System Route".
+
+**Lesson:** after a routing change, trust a live test (ping, curl) over a diagnostic view taken in the same second, and re-check the diagnostic a minute later. Also: the shell variables `$WEB_IP` and `$HUB_IP` were empty in this session (`--source-ip: expected one argument`), so they were set again by hand. `echo "[$WEB_IP]"` is a quick way to check before using one.
