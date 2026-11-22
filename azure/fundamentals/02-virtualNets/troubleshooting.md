@@ -76,3 +76,28 @@ az vm list-usage -l $LOC --query "[?name.value=='cores'].{used:currentValue, lim
 **Cause:** the next line was `az vm wait -g $RG -n vm-data --created`, which waits (up to an hour) for a VM that was never created because its `--no-wait` create had failed.
 
 **Fix:** **Ctrl + C** to cancel the wait; nothing is deleted. `commands.sh` no longer uses `--no-wait` and `az vm wait` for the VMs, so a failed create shows its error immediately.
+
+## 5. Cloud Shell lost its sign-in while creating Bastion
+
+**Section:** 5
+
+**Error:**
+
+```text
+The command requires the extension bastion. Do you want to install it now? (Y/n): y
+A Cloud Shell credential problem occurred.
+Timeout waiting for token from portal. Audience: https://management.core.windows.net/
+```
+
+Then restarting Cloud Shell failed with `Request failed with status code 401`.
+
+**Cause:** the Azure portal session had expired. Cloud Shell gets its Azure token from the portal, so once the portal sign-in lapsed, both the extension install and the restart were refused (401 = not authenticated).
+
+**Fix:**
+1. Refresh the portal page (or sign out and back in), then reopen Cloud Shell. The home directory persisted, so `~/vnetfun.env` was still there: `source ~/vnetfun.env` and redefine `vmrun`.
+2. Allow CLI extensions to install without a prompt: `az config set extension.use_dynamic_install=yes_without_prompt`.
+3. Check before re-creating: `az network bastion list -g $RG -o table` showed `bas-hub` **Succeeded**. The first request had already reached Azure before the token problem, so the resource existed.
+
+**Lessons:**
+- Check whether a resource exists before re-running a create after an error; the request may have succeeded on Azure's side even if the client failed.
+- Paste long commands as a single line. A multi-line paste ran `az config set` but appeared to skip the next command.

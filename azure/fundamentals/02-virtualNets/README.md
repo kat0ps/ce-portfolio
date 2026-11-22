@@ -76,12 +76,14 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 02 | VNets | Spoke subnets: 251 usable IPs per /24 (Azure reserves 5) |
 | 03a / 03b | Peering | hub-to-spoke and spoke-to-hub, both Connected and Fully Synchronized |
 | 04 | VMs | Both VMs running with an empty Public IP address column |
+| 05 | Bastion | SSH session to vm-web (spoke) through Bastion Basic in the hub, across the peering |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
 ![03a Peering from the hub](evidence/03a-peering-connected.png)
 ![03b Peering from the spoke](evidence/03b-peering-connected.png)
 ![04 Public IP address column empty](evidence/04-vms-no-public-ip.png)
+![05 Bastion connection](evidence/05-bastion-connect.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

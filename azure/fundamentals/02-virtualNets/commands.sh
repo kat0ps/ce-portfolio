@@ -93,8 +93,11 @@ az network watcher configure -g NetworkWatcherRG -l $LOC --enabled true -o none
 
 # ---------- 5. Bastion Basic: connect, screenshot, delete (about 15 minutes total) ----------
 az network public-ip create -g $RG -n pip-bastion -l $LOC --sku Standard -o none
-az network bastion create -g $RG -n bas-hub -l $LOC --vnet-name vnet-hub \
-  --public-ip-address pip-bastion --sku Basic -o none          # takes 5-10 minutes
+# Install CLI extensions without a Y/n prompt (the prompt can time out the Cloud Shell token).
+az config set extension.use_dynamic_install=yes_without_prompt
+# Paste this as ONE line on its own; multi-line pastes sometimes only run the first command.
+az network bastion create -g $RG -n bas-hub -l $LOC --vnet-name vnet-hub --public-ip-address pip-bastion --sku Basic -o none   # 5-10 minutes
+az network bastion list -g $RG --query "[].{name:name, state:provisioningState, sku:sku.name}" -o table
 # Portal: vm-web > Connect > Connect via Bastion > Authentication: Password > $ADMIN / your password
 # Bastion lives in the HUB and reaches a VM in the SPOKE through peering (Developer SKU can't do this).
 # 📸 05-bastion-connect.png  The SSH session in the browser tab (run: hostname; ip -4 addr show eth0)

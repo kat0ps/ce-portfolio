@@ -135,23 +135,51 @@ rtt min/avg/max/mdev = 1.008/1.486/1.826/0.348 ms
 ![01 Resource group: VNets, VMs, disks and NICs, no public IP resources](01-resource-group.png)
 ![04 Virtual machines: Public IP address column empty](04-vms-no-public-ip.png)
 
+## Step 4: Network Watcher
+
+```bash
+az network watcher configure -g NetworkWatcherRG -l $LOC --enabled true -o none
+```
+
+No output (`-o none`). Network Watcher is enabled per region and is free; it's needed for the Next hop checks in step 7.
+
 ## Step 5: Bastion Basic (created, used, deleted)
 
 ```bash
 az network public-ip create -g $RG -n pip-bastion -l $LOC --sku Standard -o none
+az config set extension.use_dynamic_install=yes_without_prompt
 az network bastion create -g $RG -n bas-hub -l $LOC --vnet-name vnet-hub \
   --public-ip-address pip-bastion --sku Basic -o none
-# connected to vm-web from the portal, then:
+az network bastion list -g $RG --query "[].{name:name, state:provisioningState, sku:sku.name}" -o table
+```
+
+```text
+Name     State      Sku
+-------  ---------  -----
+bas-hub  Succeeded  Basic
+```
+
+Connected from the portal (vm-web > Connect > Connect via Bastion, password authentication), then in the browser session:
+
+```text
+azureuser@vm-web:~$ hostname; ip -4 addr show eth0
+vm-web
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    inet 10.20.1.4/24 metric 100 brd 10.20.1.255 scope global eth0
+       valid_lft forever preferred_lft forever
+```
+
+```bash
 az network bastion delete -g $RG -n bas-hub
 az network public-ip delete -g $RG -n pip-bastion
 ```
 
-```text
-<paste output from the SSH session: hostname; ip -4 addr show eth0>
-```
-
 **What this proves**
-- 
+- An interactive SSH session to **vm-web (10.20.1.4, spoke)** through a Bastion host that lives in the **hub**: Bastion reached the VM across the peering. This is why the lab uses **Basic**; the free Developer tier doesn't support peered VNets.
+- The VM still has **no public IP**. The only public IP belonged to Bastion, and the session ran over HTTPS (443) in the browser, so no SSH or RDP port is ever exposed to the internet.
+- Bastion needs its own `AzureBastionSubnet` (/26 or larger) and a Standard public IP, both prepared in step 1.
+- Bastion was deleted straight after the screenshot: it's billed per hour whether or not anyone is connected.
+- `ip -4 addr` shows `10.20.1.255` as the broadcast address, one of the 5 addresses Azure reserves in the subnet.
 
 ![Bastion connection](05-bastion-connect.png)
 
