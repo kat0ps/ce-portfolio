@@ -9,6 +9,8 @@ Four business scenarios, each solved the way an Azure administrator would: requi
 | 3 | [Production monitoring baseline](03-prod-monitoring/) | Monitor and maintain | Activity log alerts, Service Health, Advisor alerts, action groups, budgets, activity log export and KQL |
 | 4 | [Zero-downtime releases with slots and autoscale](04-webapp-slots-autoscale/) | Compute | App Service tiers, deployment slots, sticky settings, swap with preview and rollback, autoscale rules |
 
+> **Status:** all four are written and validated with `bicep build`, but not yet deployed, so their `evidence/` folders are empty. Each will be deployed, verified and documented in turn.
+
 Identity and governance (RBAC, Azure Policy, tags, locks) is covered in [Lab 1.1](../fundamentals/03-identityGovernance/), and RBAC appears again in Scenario 1.
 
 ## Each scenario contains
