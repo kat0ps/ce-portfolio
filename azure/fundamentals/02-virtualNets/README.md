@@ -83,6 +83,8 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 | 09 | UDR | Next hop from vm-web to vm-hub is **None**, caused by route table rt-web |
 | 10 | UDR | Route table removed: next hop is **VirtualNetworkPeering** (System Route) again |
 | 11 | Service endpoint | Same request: vm-hub passes the storage firewall (`PublicAccessNotPermitted`), vm-web is blocked (`AuthorizationFailure`) |
+| 12 | Service endpoint | Storage firewall: selected networks only, vnet-hub allowed |
+| 13 | Service endpoint | vm-hub's effective routes include `VirtualNetworkServiceEndpoint` next hops for Storage address ranges |
 
 ![01 Resource group](evidence/01-resource-group.png)
 ![02 Spoke subnets](evidence/02-vnets-subnets.png)
@@ -96,6 +98,8 @@ Subscription IDs, tenant names and account names are blurred. Added as each step
 ![09 Next hop None](evidence/09-next-hop-none.png)
 ![10 Next hop VirtualNetworkPeering](evidence/10-next-hop-peering.png)
 ![11 Service endpoint test](evidence/11-service-endpoint-test.png)
+![12 Storage firewall](evidence/12-storage-firewall.png)
+![13 Service endpoint routes](evidence/13-service-endpoint-routes.png)
 
 Full command outputs for every step: [evidence/outputs.md](evidence/outputs.md)
 

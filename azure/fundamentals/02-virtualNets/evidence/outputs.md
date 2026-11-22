@@ -370,6 +370,8 @@ Enable succeeded:
 - **vm-hub: `PublicAccessNotPermitted`.** The request **passed the firewall**, because snet-shared has a `Microsoft.Storage` service endpoint and is on the account's virtual network rules. It was refused one layer later, only because anonymous access is disabled on the account (`--allow-blob-public-access false`). With real credentials (Entra ID or a SAS), this request would succeed; from vm-web it never could.
 - A service endpoint doesn't give the storage account a private IP: vm-hub still talks to the **public** endpoint `$SA1.blob.core.windows.net`. What changes is that traffic from the subnet travels over the Azure backbone and carries the subnet's identity, which the storage firewall can allow by name instead of by IP.
 - Defence in depth: the network rule decides **where** a request may come from; authentication decides **who** may do what. Both have to pass.
+- The storage account's **Networking** page shows public network access **enabled from selected networks** only, with one virtual network rule: **vnet-hub** (1 subnet, 10.10.0.0/16). No IP addresses are allowed.
+- vm-hub's NIC now has **effective routes with next hop `VirtualNetworkServiceEndpoint`** for Azure Storage's public address ranges (for example `57.150.226.0/23` and `52.239.232.128/25`). Enabling the service endpoint on the subnet added these system routes; vm-web's subnet has none, so its storage traffic goes out through the NAT gateway instead.
 
 ![Service endpoint test](11-service-endpoint-test.png)
 ![Storage firewall](12-storage-firewall.png)
