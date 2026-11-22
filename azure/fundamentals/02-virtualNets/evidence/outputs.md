@@ -306,6 +306,26 @@ IP address:     -
 Route table ID: System Route
 ```
 
+The same check from the CLI, plus the NIC's effective routes for the hub range:
+
+```bash
+az network watcher show-next-hop -g $RG --vm vm-web --source-ip $WEB_IP --dest-ip $HUB_IP -o table
+az network nic show-effective-route-table -g $RG -n vm-webVMNic \
+  --query "value[?contains(addressPrefix[0],'10.10')].{prefix:addressPrefix[0], nextHop:nextHopType, source:source, state:state}" -o table
+```
+
+```text
+NextHopType            RouteTableId
+---------------------  --------------
+VirtualNetworkPeering  System Route
+
+Prefix        NextHop      Source    State
+------------  -----------  --------  -------
+10.10.0.0/16  VNetPeering  Default   Active
+```
+
+The only route to the hub is now the **Default** (system) peering route, and it's **Active**. With the route table attached, a **User** route for the same prefix took priority over it.
+
 > Run straight after removing the route table, `az network watcher show-next-hop` still returned `None` (with no route table ID) even though the ping already worked. The effective routes behind Next hop take a minute or two to refresh. See [troubleshooting.md](../troubleshooting.md) entry 6.
 
 **What this proves**
